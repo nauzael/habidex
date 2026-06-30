@@ -1,0 +1,348 @@
+{
+  "context_envelope": {
+    "meta": {
+      "plan_id": "auto-20260627-173144",
+      "created_at": "2026-06-27T17:31:44Z",
+      "last_updated": "2026-06-27T23:00:00Z",
+      "previous_version_fields_changed": ["scope.applies_to", "scope.non_goals", "research_digest.regional_context"],
+      "version": 3,
+      "source": [
+        ".specify/memory/constitution.md",
+        "specs/001-b2b-hotel-platform/spec.md",
+        "specs/001-b2b-hotel-platform/plan.md",
+        "specs/001-b2b-hotel-platform/data-model.md",
+        "specs/001-b2b-hotel-platform/architecture.md",
+        "specs/001-b2b-hotel-platform/stack-decision.md",
+        "docs/plan/20260627-hotel-platform-architecture/plan.yaml",
+        "docs/plan/20260627-hotel-platform-architecture/context_envelope.json"
+      ]
+    },
+    "scope": {
+      "purpose": [
+        "Plataforma B2B SaaS de gestión de disponibilidad hotelera (Channel Manager + Revenue Management) para hoteles independientes en LATAM",
+        "Contexto compartido entre fases Spec Kit y agentes gem-team para decisiones de arquitectura y stack"
+      ],
+      "applies_to": [
+        "B2B Hotel Platform — Channel Manager + Revenue Management",
+         "Mercado inicial: Golfo de Morrosquillo (Tolú, Coveñas, San Antero) y Sucre, Colombia (~200-400 alojamientos en zona costera). Expansión: Costa Caribe → Colombia → LATAM",
+        "Todas las fases del roadmap (MVP Fase 1 → Scale Fase 4, 24 meses)"
+      ],
+      "non_goals": [
+         "PWA con modo offline es obligatorio desde MVP (conectividad irregular en playas del Golfo de Morrosquillo)",
+        "WhatsApp Business API es canal primario de notificaciones (no email en MVP)",
+        "Precios adaptados al mercado regional: plan Micro $19/mes (hasta 10 hab, 2 canales OTA)",
+        "Modelo de pago por temporada: pausar suscripción en temporada baja del Caribe colombiano",
+        "OTA/GDS certificaciones son externas al desarrollo de software",
+        "Contenido legal/contractual con OTAs y proveedores"
+      ]
+    },
+    "tech_stack": [
+      {
+        "name": "Node.js + TypeScript + NestJS",
+        "version": "Node 22 LTS, TS 5.5+, NestJS 11",
+        "usage_context": "Backend API principal — todos los servicios core",
+        "config_files": ["package.json", "tsconfig.json", "nest-cli.json"]
+      },
+      {
+        "name": "React + Next.js 15 + Tailwind CSS 4",
+        "version": "React 19, Next.js 15 (App Router), Tailwind 4",
+        "usage_context": "Frontend dashboards y admin panels",
+        "config_files": ["next.config.js", "tailwind.config.js"]
+      },
+      {
+        "name": "PostgreSQL 16 + TimescaleDB 2.x + Redis 7 + Elasticsearch 8",
+        "version": "PG 16, TDB 2.x, Redis 7, ES 8",
+        "usage_context": "Datos transaccionales + métricas time-series + caché + búsqueda",
+        "config_files": [".env.example"]
+      },
+      {
+        "name": "Apache Kafka + RabbitMQ",
+        "version": "Kafka 3.x, RabbitMQ 3.x",
+        "usage_context": "Event backbone + colas de tareas asíncronas",
+        "config_files": []
+      },
+      {
+        "name": "AWS + Docker + Kubernetes (EKS) + Terraform",
+        "version": "EKS 1.31+, Terraform 1.9+",
+        "usage_context": "Cloud provider e infraestructura como código",
+        "config_files": ["terraform/", "k8s/", "Dockerfile"]
+      },
+      {
+        "name": "Keycloak",
+        "version": "25+",
+        "usage_context": "Identity provider self-hosted (OAuth2/OIDC)",
+        "config_files": []
+      },
+      {
+        "name": "Grafana + Prometheus + Loki + Tempo + Sentry",
+        "version": "latest stable",
+        "usage_context": "Observabilidad: métricas, logs, traces, errores",
+        "config_files": []
+      }
+    ],
+    "conventions": [
+      "Spec Kit SDD: specs/<feature>/spec.md → plan.md → tasks.md → contracts/",
+      "Modular Monolith (Fase 1-2) → Microservicios (Fase 3+): bounded contexts con schemas PostgreSQL separados",
+      "Multi-tenancy: database-per-tenant con PgBouncer connection pooling",
+      "Optimistic locking (version column) + SERIALIZABLE isolation para Inventory y Rate",
+      "Transactional Outbox Pattern para garantizar eventos Kafka en cada cambio de estado",
+      "CQRS Lite: reads (Redis cache + Elasticsearch) separados de writes (PostgreSQL)",
+      "API-first: OpenAPI 3.0 antes de implementación",
+      "GitOps: ArgoCD + GitHub Actions; Helm charts para todos los servicios",
+      "Idempotency keys (UNIQUE constraint en DB) para todas las operaciones de booking",
+      "Hotel local date como time reference (nunca UTC para fechas de inventario/reservas)"
+    ],
+    "constraints": {
+      "hard": [
+        "SLA disponibilidad: <100ms p99 (cache hit), <5s sync post-reserva",
+        "Overbooking: 0 overbookings tolerados en producción",
+        "Multi-tenancy: aislamiento total de datos entre hoteles",
+        "DR: RPO < 5 min, RTO < 30 min",
+        "Floor price por tipo de habitación (ninguna regla de pricing puede violarlo)",
+        "TLS 1.3 + AES-256 encryption"
+      ],
+      "soft": [
+        "Preferir open-source sobre SaaS propietario cuando viable",
+        "Evolución gradual a microservicios solo cuando métricas lo justifiquen",
+        "Maximizar managed services AWS para reducir carga operacional inicial"
+      ],
+      "compatibility": [
+        "OTA XML 2.0 + REST APIs para integraciones OTA",
+        "HTNG para integraciones PMS",
+        "OAuth2 + API Keys para APIs públicas",
+        "Multi-moneda: MXN, COP, USD"
+      ],
+      "security_requirements": [
+        "OAuth2/OIDC con PKCE para SPA",
+        "API Keys rotables cada 90 días",
+        "Rate limiting por tenant + endpoint",
+        "Database-per-tenant para isolation",
+        "No almacenar datos de tarjetas — tokenización vía gateway"
+      ]
+    },
+    "architecture_snapshot": {
+      "key_dirs": {
+        "specs/001-b2b-hotel-platform/": "Especificación completa del feature (spec, plan, data-model, architecture, stack, research, review)",
+        "src/": "Código fuente por venir — estructura: components/, services/, utils/",
+        "docs/plan/20260627-hotel-platform-architecture/": "Plan de orquestación gem-team y context envelope",
+        ".specify/": "Spec Kit SDD (constitution, templates, scripts)"
+      },
+      "patterns": [
+        "Transactional Outbox (DB → Kafka)",
+        "Optimistic Locking con version column",
+        "CQRS Lite (Redis reads + PostgreSQL writes)",
+        "Adapter Pattern (OTA connectors)",
+        "Saga Pattern (reservas multi-step compensables)",
+        "Circuit Breaker (OTA calls)",
+        "Database-per-Tenant"
+      ],
+      "key_components": [
+        {
+          "name": "Availability Service",
+          "location": "src/services/availability/",
+          "responsibility": ["Inventario pooled", "Disponibilidad cacheada", "Restricciones (MLOS, CTA, Stop Sell)"],
+          "confidence": 0.9
+        },
+        {
+          "name": "Rate Service",
+          "location": "src/services/rates/",
+          "responsibility": ["Rate plans (BAR, derivadas)", "Pricing dinámico", "Rate parity detection", "Multi-moneda"],
+          "confidence": 0.9
+        },
+        {
+          "name": "Booking Service",
+          "location": "src/services/bookings/",
+          "responsibility": ["Reservas CRUD", "Overbooking prevention", "Idempotency", "Saga orchestration"],
+          "confidence": 0.9
+        },
+        {
+          "name": "Channel Sync Service",
+          "location": "src/services/channels/",
+          "responsibility": ["OTA connectors", "Sync bidireccional", "Reconciliation", "Rate limit handling"],
+          "confidence": 0.9
+        },
+        {
+          "name": "Promotion Engine",
+          "location": "src/services/promotions/",
+          "responsibility": ["Reglas de descuento", "Stacking validation", "Margin enforcement"],
+          "confidence": 0.8
+        },
+        {
+          "name": "Analytics Service",
+          "location": "src/services/analytics/",
+          "responsibility": ["Métricas TimescaleDB", "Dashboards", "Forecasting", "Alertas"],
+          "confidence": 0.8
+        }
+      ]
+    },
+    "research_digest": {
+      "relevant_files": [
+        {
+          "path": "docs/plan/20260627-hotel-platform-architecture/plan.yaml",
+          "purpose": ["Plan maestro de orquestación: 9 tareas en 5 waves para discovery y diseño arquitectónico"],
+          "why_relevant": ["Define orden de ejecución, dependencias, y agentes asignados"],
+          "security_sensitivity": "internal",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        },
+        {
+          "path": "docs/plan/20260627-hotel-platform-architecture/context_envelope.json",
+          "purpose": ["Contexto detallado: stack, arquitectura, decisiones, gotchas, preguntas abiertas"],
+          "why_relevant": ["Base de conocimiento completa para agentes de implementación"],
+          "security_sensitivity": "internal",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        }
+      ],
+      "dependencies": {
+        "internal": [
+          "Availability → Rate (disponibilidad afecta pricing)",
+          "Booking → Availability (reserva consume inventario)",
+          "Booking → Channel Sync (sincronizar a OTAs)",
+          "Channel Sync → Availability (OTA push actualiza inventario)"
+        ],
+        "external": [
+          "Booking.com API (OTA XML + REST)",
+          "Expedia API (REST)",
+          "Despegar API (REST) — alta prioridad para mercado colombiano",
+          "Airbnb API (REST)",
+          "Stripe (pagos internacionales con tarjeta)",
+          "PayU / Epayco / Wompi (pagos locales: Nequi, Daviplata, PSE, Efecty)",
+          "Meta WhatsApp Cloud API (notificaciones y soporte)",
+          "Keycloak (auth)",
+          "AWS (EKS, RDS, ElastiCache, MSK, CloudFront, S3)"
+        ]
+      },
+      "gotchas": [
+        {
+          "text": "Certificación OTA (Booking.com, Expedia) puede tomar 3-6 meses. Iniciar application process desde día 1. Despegar tiene dominio en Colombia y debe priorizarse junto con Booking.com.",
+          "confidence": 0.9
+        },
+        {
+          "text": "Rate limits estrictos de OTAs requieren throttling adaptativo y colas de reintento en Channel Sync Service.",
+          "confidence": 0.8
+        },
+        {
+          "text": "Timezones: toda fecha de inventario debe ser 'hotel local date', no UTC. Una reserva a las 23:59 en Tolú (UTC-5) es del mismo día en el hotel.",
+          "confidence": 0.9
+        },
+        {
+          "text": "Hoteles pequeños en el Golfo de Morrosquillo a menudo no tienen PMS digital. Ofrecer 'PMS Lite' o importación CSV como fallback. Menos del 5% de hoteles en la región usan PMS.",
+          "confidence": 0.9
+        },
+        {
+          "text": "Pricing dinámico requiere 6-12 meses de datos históricos. MVP usará reglas semi-manuales. La estacionalidad del Caribe (Diciembre-Enero, Semana Santa, Junio-Julio) es factor clave en el motor de reglas.",
+          "confidence": 0.9
+        },
+        {
+          "text": "Conectividad internet en la región es variable: buena en Tolú/Coveñas (4G+fibra), limitada en playas alejadas (3G irregular), satelital en islas (>600ms latencia). PWA con modo offline es obligatorio desde MVP.",
+          "confidence": 0.95
+        },
+        {
+          "text": "Hoteleros del Golfo de Morrosquillo usan principalmente smartphones Android gama media. UI debe ser mobile-first. WhatsApp, no email, es el canal de comunicación y notificaciones preferido.",
+          "confidence": 0.95
+        },
+        {
+          "text": "Métodos de pago locales (Nequi, Daviplata, Efecty, PSE) son esenciales para cobrar suscripciones en la región. Pocos hoteleros tienen tarjeta de crédito internacional.",
+          "confidence": 0.9
+        },
+        {
+          "text": "AWS no tiene región en Colombia (2026). Latencia us-east-1 → Costa Caribe: ~50-70ms. Compensar con CloudFront CDN (edge Bogotá) y PWA offline. Evaluar GCP si abre región en Chile/Colombia en Fase 4.",
+          "confidence": 0.9
+        }
+      ],
+      "open_questions": [
+        {
+          "question": "¿Cuál es el estado actual de las regulaciones de rate parity en Colombia?",
+          "context": "Algunos países han prohibido cláusulas de rate parity. Verificar si Colombia tiene restricciones, especialmente relevante para el mercado inicial en Golfo de Morrosquillo/Sucre.",
+          "type": "decision_blocker",
+          "affects": ["Rate parity detection feature", "HOTEL-SPEC"]
+        },
+        {
+          "question": "¿Qué PMS locales dominan el mercado hotelero en la Costa Caribe colombiana? ¿Qué penetración real tienen?",
+          "context": "En el Golfo de Morrosquillo la penetración de PMS es <5%. Se necesita mapear el landscape de PMS en Colombia para integraciones Fase 3 y verificar sistemas prevalentes en Cartagena/Santa Marta para Fase 2.",
+          "type": "decision_blocker",
+          "affects": ["PMS integration strategy", "HOTEL-DATA-MODEL"]
+        },
+        {
+          "question": "¿Qué agregador de pagos ofrece mejor integración con Nequi, Daviplata, PSE y Efecty para cobros recurrentes B2B?",
+          "context": "PayU, Epayco, Wompi son opciones en Colombia. Verificar cuál soporta suscripciones recurrentes (no solo pagos únicos) y cuál tiene las menores comisiones.",
+          "type": "decision_blocker",
+          "affects": ["Payment integration", "HOTEL-RESEARCH-DOMAIN"]
+        },
+        {
+          "question": "¿Cuál es la cobertura real 4G y fibra óptica en playas del Golfo de Morrosquillo (Rincón del Mar, Berrugas, Islas San Bernardo)?",
+          "context": "La arquitectura del modo offline depende de qué tan mala es la conectividad en las zonas objetivo. Verificar cobertura de Claro, Movistar, Tigo en esas ubicaciones específicas.",
+          "type": "decision_blocker",
+          "affects": ["PWA offline strategy", "HOTEL-ARCH-DESIGN"]
+        },
+        {
+          "question": "¿Starlink está disponible o planea estarlo en la Costa Caribe colombiana? ¿Podría resolver conectividad en islas en 1-2 años?",
+          "context": "Hoteles en Islas San Bernardo dependen de internet satelital tradicional (>600ms latencia). Starlink ofrecería 25-50ms, cambiando radicalmente la experiencia.",
+          "type": "research",
+          "affects": ["Long-term connectivity strategy", "HOTEL-ARCH-DESIGN"]
+        }
+      ]
+    },
+    "prior_decisions": [
+      {
+        "decision": "Backend: Node.js + TypeScript + NestJS",
+        "rationale": ["Mejor pool talento LATAM", "Patrones enterprise para multi-modulo", "Type safety para dominio financiero", "Iteración rápida vs Java/Go"],
+        "evidence": ["specs/001-b2b-hotel-platform/stack-decision.md"],
+        "confidence": 0.9
+      },
+      {
+        "decision": "Frontend: React 19 + Next.js 15 (App Router) + Tailwind CSS 4",
+        "rationale": ["Mayor pool talento React LATAM", "RSC reduce JS en cliente", "Ecosistema masivo componentes"],
+        "evidence": ["specs/001-b2b-hotel-platform/stack-decision.md"],
+        "confidence": 0.9
+      },
+      {
+        "decision": "Database: PostgreSQL 16 + TimescaleDB 2.x + Redis 7 + Elasticsearch 8",
+        "rationale": ["ACID para bookings", "Hypertables para métricas", "Redis para <100ms SLA", "ES para búsqueda"],
+        "evidence": ["specs/001-b2b-hotel-platform/stack-decision.md"],
+        "confidence": 0.9
+      },
+      {
+        "decision": "Arquitectura: Modular Monolith (Fase 1-2) → Microservicios (Fase 3+)",
+        "rationale": ["MVP con 50-200 hoteles no necesita microservicios", "Bounded contexts desde día 1 facilitan migración futura"],
+        "evidence": ["specs/001-b2b-hotel-platform/architecture.md"],
+        "confidence": 0.9
+      },
+      {
+        "decision": "Multi-tenancy: database-per-tenant desde el inicio",
+        "rationale": ["Máximo isolation", "Backups individuales", "Scale out horizontal"],
+        "evidence": ["specs/001-b2b-hotel-platform/architecture.md"],
+        "confidence": 0.9
+      },
+      {
+        "decision": "Cloud: AWS us-east-1 como región primaria",
+        "rationale": ["~50ms latencia desde CDMX", "Local Zones en MX", "Managed services maduros"],
+        "evidence": ["specs/001-b2b-hotel-platform/infrastructure-research.md"],
+        "confidence": 0.8
+      },
+      {
+        "decision": "Spec Kit v0.11.9 integrado con gem-team",
+        "rationale": ["Integración opencode built-in", "Flujo SDD: constitution → specify → plan → tasks → implement"],
+        "evidence": ["docs/plan/20260627-spec-kit-gemteam-integration/plan.yaml"],
+        "confidence": 1.0
+      }
+    ],
+    "reuse_notes": [
+      {
+        "path": "docs/plan/20260627-hotel-platform-architecture/plan.yaml",
+        "trust": "high"
+      },
+      {
+        "path": "docs/plan/20260627-hotel-platform-architecture/context_envelope.json",
+        "trust": "high"
+      },
+      {
+        "path": "specs/001-b2b-hotel-platform/",
+        "trust": "high"
+      }
+    ]
+  }
+}

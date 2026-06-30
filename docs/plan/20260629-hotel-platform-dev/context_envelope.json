@@ -1,0 +1,419 @@
+{
+  "context_envelope": {
+    "meta": {
+      "plan_id": "20260629-hotel-platform-dev",
+      "created_at": "2026-06-29T10:55:00Z",
+      "last_updated": "2026-06-29T10:55:00Z",
+      "version": 1,
+      "source": [
+        "docs/PLAN-EJECUCION.md",
+        "docs/plan/20260627-hotel-platform-architecture/plan.yaml",
+        "docs/plan/20260627-hotel-platform-architecture/context_envelope.json",
+        "context_envelope.json",
+        "specs/001-b2b-hotel-platform/"
+      ]
+    },
+    "scope": {
+      "purpose": [
+        "Plan de desarrollo completo para la plataforma B2B hotelera con todas las correcciones arquitectónicas críticas",
+        "Contexto de implementación para agentes gem-team durante la construcción del MVP y beta"
+      ],
+      "applies_to": [
+        "Plataforma B2B SaaS Channel Manager + Revenue Management",
+        "Mercado inicial: Golfo de Morrosquillo (Tolú, Coveñas, San Antero) y Sucre, Colombia",
+        "MVP en Fly.io + Neon + Upstash ($0-2/mes)",
+        "Todas las waves del roadmap (Wave 0-7, ~16 semanas)"
+      ],
+      "non_goals": [
+        "Microservicios: Modular Monolith hasta >200 hoteles",
+        "Kafka/RabbitMQ diferido a Fase 3: BullMQ para MVP",
+        "Database-per-tenant diferido a >500 hoteles: RLS para MVP",
+        "Kong API Gateway eliminado: NestJS middleware nativo",
+        "Feature flags complejos diferidos: hardcoded config para MVP",
+        "PMS integrations, GDS, MetaSearch diferidos a Fase 2-3",
+        "Revenue Management ML diferido a Fase 3 (6 meses de datos)"
+      ]
+    },
+    "tech_stack": [
+      {
+        "name": "Node.js + TypeScript + NestJS 11",
+        "version": "Node 22 LTS, TypeScript 5.5+, NestJS 11",
+        "usage_context": "Backend API principal — todos los servicios core en monolith modular",
+        "config_files": ["package.json", "tsconfig.json", "nest-cli.json"]
+      },
+      {
+        "name": "React + Next.js 15 (App Router) + Tailwind CSS 4",
+        "version": "React 19, Next.js 15, Tailwind 4",
+        "usage_context": "Frontend: PWA dashboard + admin panel + onboarding",
+        "config_files": ["next.config.js", "tailwind.config.ts"]
+      },
+      {
+        "name": "PostgreSQL 16 + Neon Serverless",
+        "version": "PG 16 on Neon (free tier 0.5GB)",
+        "usage_context": "Base de datos transaccional. RLS para multi-tenancy. Un solo schema.",
+        "config_files": [".env.example", "prisma/schema.prisma"]
+      },
+      {
+        "name": "Redis 7 + Upstash",
+        "version": "Redis 7 on Upstash (free tier 10MB)",
+        "usage_context": "Cache disponibilidad, rate limiting, sesiones, colas BullMQ, distributed locks",
+        "config_files": [".env.example"]
+      },
+      {
+        "name": "BullMQ (reemplaza Kafka + RabbitMQ)",
+        "version": "BullMQ 5.x",
+        "usage_context": "Colas asíncronas: sync OTA, notificaciones, reconciliation, backup, emails",
+        "config_files": []
+      },
+      {
+        "name": "Fly.io + Cloudflare",
+        "version": "Fly.io (256MB shared VM), Cloudflare DNS+CDN",
+        "usage_context": "Hosting MVP: API + PWA + volumen backups. Cloudflare: DNS, CDN, DDoS.",
+        "config_files": ["fly.toml", "Dockerfile"]
+      },
+      {
+        "name": "Prisma ORM",
+        "version": "Prisma 6.x",
+        "usage_context": "ORM para PostgreSQL con migraciones, seed, y generación de tipos",
+        "config_files": ["prisma/schema.prisma"]
+      },
+      {
+        "name": "WhatsApp Cloud API (Meta)",
+        "version": "v21.0",
+        "usage_context": "Canal primario de notificaciones y soporte. Reemplaza email como canal principal.",
+        "config_files": []
+      },
+      {
+        "name": "Resend",
+        "version": "latest",
+        "usage_context": "Email transaccional: bienvenida, password reset, facturas DIAN",
+        "config_files": []
+      }
+    ],
+    "conventions": [
+      "Modular Monolith: 9 módulos NestJS con schemas PostgreSQL separados en el mismo proceso",
+      "RLS multi-tenancy: tenant_id = hotel_id UUID en todas tablas, set_tenant_context() en middleware",
+      "Optimistic locking: version column en Inventory, Rate, Restriction tables",
+      "BullMQ colas: ota-sync, notifications, reconciliation, webhooks, audit, mail, backup",
+      "Correlation ID en cada request (UUIDv4), propagado a colas BullMQ y logs",
+      "Plan features hardcoded: PLAN_FEATURES config, @PlanGuard() decorator",
+      "PWA-first: mobile-first, offline con IndexedDB, background sync",
+      "Feature flags: founders/full-access + free/limited (hardcoded, no sistema complejo)",
+      "Hotel local date (Colombia/Bogotá tz) para fechas de inventario y reservas",
+      "Prisma ORM: schema.prisma -> migraciones -> seed data -> cliente generado"
+    ],
+    "constraints": {
+      "hard": [
+        "Fly.io 256MB RAM: BullMQ worker debe ser proceso separado o child process limitado",
+        "Neon 0.5GB free: monitorear crecimiento, migrar a Neon Scale ($19/mes) si supera 300MB",
+        "Upstash 10MB Redis: colas pequeñas con TTL corto, máx 100 mensajes simultáneos",
+        "WhatsApp free tier: 250 msg/día, solo notificaciones críticas en MVP",
+        "SLA overbooking: 0% tolerado, detección <1min, alerta <2min",
+        "Backup RPO: <24h (pg_dump diario). RTO: <30min (restore automático)",
+        "RLS isolation: cross-tenant access imposible por políticas PostgreSQL + app-level guards",
+        "TLS 1.3 + HTTPS obligatorio en todas las comunicaciones",
+        "Floor price: ninguna regla de pricing puede producir tarifa por debajo del mínimo configurado"
+      ],
+      "soft": [
+        "Preferir open-source y tier gratis sobre SaaS pago durante MVP",
+        "Evolución a microservicios solo cuando >200 hoteles o 3+ devs por módulo",
+        "Idempotency keys (UNIQUE en DB) para todas las operaciones de booking y webhook OTA",
+        "Hotel local date (no UTC) para toda fecha de inventario/reserva"
+      ],
+      "compatibility": [
+        "PWA: Android Chrome 90+, iOS Safari 15+, sin app store",
+        "OTAs: Booking.com B.XML + OTA XML + REST, Despegar Partner API REST",
+        "WhatsApp Cloud API v21.0",
+        "DIAN facturación: Xubio, Siigo o Alegra (evaluar en Wave 5)",
+        "Pagos: Nequi, PSE, Efecty, Stripe"
+      ],
+      "security_requirements": [
+        "JWT con RS256, access token 15min, refresh token 7d en Redis",
+        "Rate limiting por endpoint + plan: free=100req/min, founders=2000req/min",
+        "RLS: policies PostgreSQL impiden acceso cross-tenant a nivel BD",
+        "Secrets en Fly.io secrets (nunca en GitHub). Rotación manual cada 90 días.",
+        "No almacenar datos de tarjetas: tokenización vía gateway (Nequi/PSE/Stripe)"
+      ]
+    },
+    "architecture_snapshot": {
+      "key_dirs": {
+        "apps/api/src/": "NestJS backend: módulos Availability, Rate, Booking, Channels, Promotions, Auth, Admin, Support, Billing, WhatsApp",
+        "apps/web/src/": "Next.js PWA: dashboard, onboarding, admin panel, help desk, FAQ",
+        "apps/api/prisma/": "Schema, migraciones y seed de PostgreSQL",
+        "apps/api/tests/": "Tests de integración, mock OTA server, load tests (k6), security tests",
+        "docs/plan/20260629-hotel-platform-dev/": "Plan de desarrollo, context envelope, decisiones arquitectónicas",
+        "docs/operations/": "Plan de contingencia, playbooks de restore",
+        "scripts/": "Backup, restore, contingency scripts"
+      },
+      "patterns": [
+        "BullMQ Job Queue con DLQ + retry exponencial (reemplaza Kafka/RabbitMQ)",
+        "RLS Multi-tenancy: tenant_id column + PostgreSQL policies + set_tenant_context()",
+        "NestJS Guards: JwtAuthGuard, RolesGuard, PlanGuard (reemplaza Kong API Gateway)",
+        "Optimistic Locking: version column + retry en serialization failure",
+        "Cache-aside: Redis cache con TTL 5s + invalidación en write",
+        "Bridge Pattern: flujo puente manual (WhatsApp+Demand API+CSV) hasta certificación OTA",
+        "Transactional Outbox Lite: evento de dominio -> cola BullMQ (sin Kafka)",
+        "Plan Feature Flags hardcoded: PLAN_FEATURES const + PlanGuard"
+      ],
+      "key_components": [
+        {
+          "name": "AvailabilityModule",
+          "location": "apps/api/src/availability/",
+          "responsibility": ["Pooled inventory", "Redis cache (TTL 5s)", "Optimistic locking", "WebSocket real-time updates"],
+          "confidence": 0.95
+        },
+        {
+          "name": "BookingModule",
+          "location": "apps/api/src/booking/",
+          "responsibility": ["CRUD reservas", "Edge cases: cancel, modify, no-show, partial", "Overbooking detection + recovery", "Idempotency keys"],
+          "confidence": 0.9
+        },
+        {
+          "name": "ChannelSyncModule",
+          "location": "apps/api/src/channels/",
+          "responsibility": ["OTA Connector interface", "BookingConnector (XML + Demand API)", "DespegarConnector (REST)", "CSV bridge fallback", "Reconciliation jobs"],
+          "confidence": 0.9
+        },
+        {
+          "name": "AuthModule",
+          "location": "apps/api/src/auth/",
+          "responsibility": ["Login/registro JWT", "Roles: admin, staff, super_admin", "Plan features guards", "set_tenant_context middleware", "Password reset"],
+          "confidence": 0.95
+        },
+        {
+          "name": "WhatsAppModule",
+          "location": "apps/api/src/whatsapp/",
+          "responsibility": ["WhatsApp Cloud API", "Template messages", "Webhook receiver", "24h session management", "Rate limiting cola"],
+          "confidence": 0.9
+        },
+        {
+          "name": "PlansModule",
+          "location": "apps/api/src/plans/",
+          "responsibility": ["Feature flags hardcoded", "Founders transition jobs", "Upgrade/downgrade flow", "Sync interval config"],
+          "confidence": 0.9
+        },
+        {
+          "name": "SupportModule",
+          "location": "apps/api/src/support/",
+          "responsibility": ["Ticket system (dashboard + WhatsApp)", "SLA enforcement", "FAQ knowledge base", "Escalation"],
+          "confidence": 0.85
+        },
+        {
+          "name": "AuditModule",
+          "location": "apps/api/src/audit/",
+          "responsibility": ["AuditInterceptor (mutaciones automáticas)", "Eventos de dominio", "Cola async para inserts", "API consulta con paginación cursor"],
+          "confidence": 0.9
+        }
+      ]
+    },
+    "research_digest": {
+      "relevant_files": [
+        {
+          "path": "docs/PLAN-EJECUCION.md",
+          "purpose": ["Plan de negocio completo: mercado, funcionalidades, hosting, roadmap financiero"],
+          "why_relevant": ["Base del plan de desarrollo: features core, tiers, Founders, OTA strategy"],
+          "security_sensitivity": "internal",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        },
+        {
+          "path": "docs/plan/20260627-hotel-platform-architecture/plan.yaml",
+          "purpose": ["Plan de discovery y diseño arquitectónico previo (9 tareas, 5 waves)"],
+          "why_relevant": ["Contiene investigación de dominio, stack, patrones, infra que alimenta este plan"],
+          "security_sensitivity": "internal",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        },
+        {
+          "path": "docs/plan/20260627-hotel-platform-architecture/context_envelope.json",
+          "purpose": ["Contexto detallado: stack original, arquitectura, decisiones, gotchas del dominio hotelero"],
+          "why_relevant": ["Corregido por este plan: Kafka->BullMQ, DB-per-tenant->RLS, Kong->NestJS"],
+          "security_sensitivity": "internal",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        }
+      ],
+      "dependencies": {
+        "internal": [
+          "CORR-01 (BullMQ) -> todas las tareas que usan colas",
+          "CORR-02 (RLS) -> CORE-01 (data model con tenant_id)",
+          "FND-01 (infra) -> todas las tareas de implementación",
+          "FND-04 (auth) -> EXP-01 (WhatsApp), EXP-02 (dashboard), PLAT-02 (plans)",
+          "CORE-01 (data model) -> CORE-02 (inventory), OTA-03 (Booking), OTA-04 (Despegar)",
+          "CORE-02 (inventory) -> EXP-02 (dashboard), OTA-05 (bridge), TST-05 (load tests)",
+          "OTA-01/02 (certificaciones) -> OTA-03/04 (conectores técnicos)"
+        ],
+        "external": [
+          "Fly.io (hosting API+PWA)",
+          "Neon (PostgreSQL serverless)",
+          "Upstash (Redis serverless)",
+          "Cloudflare (DNS + CDN + DDoS)",
+          "Meta WhatsApp Cloud API (notificaciones y soporte)",
+          "Booking.com Connectivity Program / Demand Partner API",
+          "Despegar Partner Portal / Partner API",
+          "Resend (email transaccional)",
+          "Proveedor DIAN facturación electrónica (Xubio/Siigo/Alegra)",
+          "Nequi, PSE, Efecty (pagos locales), Stripe (internacional)"
+        ]
+      },
+      "gotchas": [
+        {
+          "text": "Certificación Booking.com toma 3-6 meses. Iniciar Día 1 (Wave 3). El flujo puente (WhatsApp+Demand API+CSV) funciona desde MVP sin certificación.",
+          "confidence": 0.95
+        },
+        {
+          "text": "Fly.io 256MB RAM: NestJS + BullMQ worker en misma VM puede causar OOM. Separar en 2 procesos Fly.io o worker como child process con 128MB.",
+          "confidence": 0.9
+        },
+        {
+          "text": "WhatsApp Business API requiere aprobación Meta (1-14 días). Iniciar registro en Wave 1 aunque el módulo WhatsApp se implemente en Wave 4.",
+          "confidence": 0.9
+        },
+        {
+          "text": "Neon 0.5GB free incluye compute siempre activo pero límite de conexiones. PgBouncer integrado de Neon debe configurarse correctamente.",
+          "confidence": 0.85
+        },
+        {
+          "text": "Hoteleros del Golfo de Morrosquillo (Don José, 58 años) NO tienen experiencia con apps. Onboarding presencial obligatorio. UI con máximo 3 botones visibles.",
+          "confidence": 0.95
+        },
+        {
+          "text": "Conectividad en playas del Golfo de Morrosquillo: buena 4G en Tolú/Coveñas, irregular en playas alejadas. PWA offline no es opcional, es obligatorio.",
+          "confidence": 0.95
+        },
+        {
+          "text": "WhatsApp, NO email, es el canal de comunicación digital de los hoteleros costeños. La plataforma debe funcionar mayormente desde WhatsApp.",
+          "confidence": 0.95
+        },
+        {
+          "text": "Despegar es la OTA #1 en Colombia. Priorizarla junto con Booking.com desde Día 1. Su proceso de partnership es más ágil que Booking.",
+          "confidence": 0.9
+        },
+        {
+          "text": "Facturación DIAN es obligatoria en Colombia. Elegir proveedor con buena API. Xubio tiene mejor API REST que Siigo (SOAP legacy).",
+          "confidence": 0.8
+        }
+      ],
+      "domain_context": {
+        "security_considerations": [
+          {
+            "area": "Cross-tenant data access",
+            "location": "RLS policies + set_tenant_context() middleware",
+            "concern": "Asegurar que tenant_id se propaga correctamente en todos los queries, incluyendo jobs BullMQ"
+          },
+          {
+            "area": "OTA webhook security",
+            "location": "HMAC validation en webhook receivers",
+            "concern": "HMAC debe validarse con timing-safe comparison. Idempotency keys previenen replay attacks."
+          },
+          {
+            "area": "WhatsApp API tokens",
+            "location": "Fly.io secrets",
+            "concern": "Access tokens con permisos de envío de mensajes. Rotar cada 90 días."
+          },
+          {
+            "area": "JWT signing keys",
+            "location": "config/keys/ (no commit)",
+            "concern": "RS256 key pair. Private key NUNCA en GitHub. Generar con openssl durante setup."
+          }
+        ],
+        "testing_patterns": {
+          "framework": "Jest + Supertest + k6",
+          "coverage_areas": ["Unit (80%+ statements)", "Integration (API endpoints)", "OTA mock (connector tests)", "Offline sync (IndexedDB mock)", "Load (k6 scenarios)", "Security (auth, RLS, rate limit)"],
+          "test_organization": "*.spec.ts junto al archivo fuente. tests/integration/ para e2e. tests/load/ para k6. tests/security/ para security.",
+          "mock_patterns": "jest.mock para Prisma, Redis, BullMQ. Supertest para API. Mock OTA server (Express) para connectors. fake-indexeddb para offline tests."
+        },
+        "error_handling": "Global ExceptionFilter en NestJS. Errores conocidos -> HTTP status code + mensaje en español. Errores no conocidos -> 500 + correlationId + log. Circuit breaker en Redis: si Redis caído, servir desde PostgreSQL. Retry BullMQ con backoff exponencial.",
+        "data_flow": "Hotelero (PWA/Android) -> Cloudflare CDN -> Fly.io NestJS API -> PostgreSQL (writes) + Redis (reads cache). OCultar BullMQ jobs: sync OTA, WhatsApp notifications, reconciliation. OTA webhooks -> POST a /api/v1/channels/{ota}/webhook -> HMAC validation -> cola -> procesar"
+      },
+      "open_questions": [
+        {
+          "question": "¿Qué proveedor DIAN (Xubio, Siigo, Alegra) tiene mejor API REST para integración B2B SaaS?",
+          "context": "Evaluar documentación, sandbox, costos ($10-50/mes), y soporte para facturación recurrente.",
+          "type": "decision_blocker",
+          "affects": ["PLAT-03"]
+        },
+        {
+          "question": "¿Cuánto tarda realmente la aprobación de WhatsApp Business API para una startup colombiana?",
+          "context": "Meta Business verification puede tomar 1-14 días. Si >2 semanas, ajustar timeline de WhatsApp.",
+          "type": "research",
+          "affects": ["EXP-01"]
+        },
+        {
+          "question": "¿Booking.com Connectivity Program acepta startups sin historial? ¿O es mejor usar Demand Partner API como plan A?",
+          "context": "Booking puede rechazar startups. Demand API es más accesible pero solo lectura de disponibilidad.",
+          "type": "decision_blocker",
+          "affects": ["OTA-01", "OTA-03"]
+        }
+      ]
+    },
+    "prior_decisions": [
+      {
+        "decision": "BullMQ reemplaza Kafka + RabbitMQ + Debezium para MVP",
+        "rationale": ["Kafka no cabe en Fly.io 256MB RAM", "BullMQ usa Upstash Redis (ya en stack)", "Colas pequeñas no necesitan event backbone", "Kafka se agrega en Fase 3 (>200 hoteles)"],
+        "evidence": ["docs/plan/20260629-hotel-platform-dev/plan.yaml (CORR-01)"],
+        "confidence": 0.95,
+        "linked_constraints": ["Fly.io 256MB", "Upstash 10MB free"]
+      },
+      {
+        "decision": "RLS reemplaza database-per-tenant para MVP",
+        "rationale": ["Simplifica operaciones: 1 DB, 1 backup, 1 schema", "RLS de PostgreSQL es probado y seguro", "Database-per-tenant añade complejidad innecesaria para <500 hoteles"],
+        "evidence": ["docs/plan/20260629-hotel-platform-dev/plan.yaml (CORR-02)"],
+        "confidence": 0.95,
+        "linked_constraints": ["PostgreSQL RLS", "tenant_id en todas tablas"]
+      },
+      {
+        "decision": "NestJS middleware reemplaza Kong API Gateway",
+        "rationale": ["Kong es overengineering para MVP", "NestJS Guards + Interceptors cubren auth, rate limiting, logging", "Express middleware es probado y suficiente"],
+        "evidence": ["docs/plan/20260629-hotel-platform-dev/plan.yaml (CORR-03)"],
+        "confidence": 0.95
+      },
+      {
+        "decision": "Modular Monolith (9 módulos NestJS, un proceso)",
+        "rationale": ["Un proceso NestJS cabe en Fly.io 256MB", "Comunicación directa entre módulos = 0ms latencia", "Extraer a microservicio = copiar carpeta + exponer API"],
+        "evidence": ["docs/plan/20260629-hotel-platform-dev/plan.yaml (CORR-04)"],
+        "confidence": 0.9,
+        "linked_constraints": ["Fly.io 256MB"]
+      },
+      {
+        "decision": "Feature flags hardcoded (no LaunchDarkly ni sistema complejo)",
+        "rationale": ["7 planes definidos con límites fijos", "Hardcoded = 0 infraestructura adicional", "Fácil de migrar a sistema de flags en Fase 2 si necesario"],
+        "evidence": ["docs/plan/20260629-hotel-platform-dev/plan.yaml (PLAT-02)"],
+        "confidence": 0.95
+      },
+      {
+        "decision": "WhatsApp como canal primario de notificaciones (no email)",
+        "rationale": ["Hoteleros costeños NO revisan email", "WhatsApp tiene 95%+ de tasa de lectura en LATAM", "Email como fallback secundario"],
+        "evidence": ["docs/PLAN-EJECUCION.md"],
+        "confidence": 0.95
+      },
+      {
+        "decision": "PWA sobre app nativa",
+        "rationale": ["Hoteleros no instalan apps de tiendas", "PWA ocupa <5MB, funciona offline", "Una sola codebase web + mobile"],
+        "evidence": ["docs/PLAN-EJECUCION.md"],
+        "confidence": 0.95
+      }
+    ],
+    "reuse_notes": [
+      {
+        "path": "docs/plan/20260627-hotel-platform-architecture/plan.yaml",
+        "trust": "high"
+      },
+      {
+        "path": "docs/plan/20260627-hotel-platform-architecture/context_envelope.json",
+        "trust": "high"
+      },
+      {
+        "path": "docs/PLAN-EJECUCION.md",
+        "trust": "high"
+      },
+      {
+        "path": "context_envelope.json",
+        "trust": "high"
+      }
+    ]
+  }
+}

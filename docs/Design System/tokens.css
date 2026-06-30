@@ -1,0 +1,134 @@
+/* ===========================================================
+   HotelManager — Design Tokens
+   Brand: Deep Slate primary + Terracota accent
+   Inspired by Donezo reference layout (clean cards, soft shadows)
+   =========================================================== */
+
+:root {
+  /* --- Brand: neutrales --- */
+  --bg-warm:    #F7F4F0;   /* canvas principal (referencia gris → cream hotelero) */
+  --card:       #FFFFFF;
+  --surface-2:  #FBF9F6;   /* alt surface para sub-paneles */
+  --border:     #E5E0D8;
+  --border-strong: #D6D0C4;
+
+  /* --- Brand: texto --- */
+  --text:       #1C1C2E;
+  --text-muted: #6B6B80;
+  --text-soft:  #9A9AA8;
+  --text-inverse: #FFFFFF;
+
+  /* --- Brand: colores principales --- */
+  --slate-900:  #1E2E4A;   /* primary / brand / sidebar gradient start */
+  --slate-800:  #2A3E5A;   /* sidebar gradient end */
+  --slate-700:  #2E4A7A;   /* slate medium */
+  --slate-500:  #4A6B9A;   /* slate light */
+  --slate-100:  #E5EAF3;   /* tints para fondos slate */
+
+  --terracota-600: #C46A48; /* terracota hover */
+  --terracota-500: #D47A5A; /* terracota / CTA principal */
+  --terracota-100: #F8E6DD; /* terracota tint */
+  --terracota-50:  #FCF3EE;
+
+  --sage-600:   #4A7A5C;   /* success hover */
+  --sage-500:   #5A8C6F;   /* success */
+  --sage-100:   #E1ECE5;
+
+  --amber-500:  #C49B4A;   /* warning */
+  --amber-100:  #F4ECDA;
+
+  --red-500:    #C95A5A;   /* error */
+  --red-100:    #F4DADA;
+
+  /* --- Semantic --- */
+  --primary:    var(--slate-900);
+  --primary-hover: var(--slate-800);
+  --accent:     var(--terracota-500);
+  --accent-hover: var(--terracota-600);
+  --success:    var(--sage-500);
+  --warning:    var(--amber-500);
+  --danger:     var(--red-500);
+  --info:       var(--slate-500);
+
+  /* --- Tipografía --- */
+  --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-body:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace;
+
+  /* --- Escala tipográfica (1.250 — major third) --- */
+  --fs-display: 48px;
+  --fs-h1:      36px;
+  --fs-h2:      28px;
+  --fs-h3:      22px;
+  --fs-h4:      18px;
+  --fs-body:    15px;
+  --fs-small:   13px;
+  --fs-caption: 12px;
+  --fs-micro:   11px;
+
+  /* --- Line heights --- */
+  --lh-display: 1.05;
+  --lh-h1:      1.15;
+  --lh-h2:      1.25;
+  --lh-h3:      1.35;
+  --lh-body:    1.55;
+  --lh-small:   1.5;
+
+  /* --- Letter-spacing --- */
+  --ls-display: -0.025em;
+  --ls-h1:     -0.02em;
+  --ls-h2:     -0.015em;
+  --ls-h3:     -0.01em;
+  --ls-body:    0;
+  --ls-uppercase: 0.08em;
+
+  /* --- Spacing scale (4px base) --- */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-7:  32px;
+  --sp-8:  40px;
+  --sp-9:  48px;
+  --sp-10: 64px;
+  --sp-12: 80px;
+
+  /* --- Radius --- */
+  --radius-xs:   6px;
+  --radius-sm:   10px;
+  --radius-md:   14px;
+  --radius-lg:   18px;
+  --radius-xl:   24px;
+  --radius-pill: 999px;
+
+  /* --- Shadows (suaves, hospitalidad) --- */
+  --shadow-xs: 0 1px 2px rgba(28, 28, 46, 0.04);
+  --shadow-sm: 0 2px 4px rgba(28, 28, 46, 0.04), 0 1px 2px rgba(28, 28, 46, 0.03);
+  --shadow-md: 0 4px 12px rgba(28, 28, 46, 0.06), 0 2px 4px rgba(28, 28, 46, 0.04);
+  --shadow-lg: 0 8px 24px rgba(28, 28, 46, 0.08), 0 4px 8px rgba(28, 28, 46, 0.04);
+  --shadow-xl: 0 16px 40px rgba(28, 28, 46, 0.10);
+  --shadow-inset: inset 0 1px 2px rgba(28, 28, 46, 0.05);
+
+  /* --- Borders --- */
+  --border-w-hairline: 1px;
+  --border-w-thin:     1.5px;
+  --border-w-thick:    2px;
+
+  /* --- Transitions --- */
+  --t-fast:    120ms ease-out;
+  --t-base:    200ms ease-out;
+  --t-slow:    320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* --- Layout --- */
+  --sidebar-w:    240px;
+  --topbar-h:     72px;
+  --content-max:  1400px;
+  --mobile-w:     390px;
+  --mobile-h:     844px;
+  --mobile-radius: 38px;
+}
+
+/* --- Fuentes (Google Fonts) --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');

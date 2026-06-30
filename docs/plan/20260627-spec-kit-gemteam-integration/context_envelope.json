@@ -1,0 +1,476 @@
+{
+  "context_envelope": {
+    "meta": {
+      "plan_id": "20260627-spec-kit-gemteam-integration",
+      "previous_plan_id": "spec-kit-integration",
+      "created_at": "2026-06-27T14:00:00Z",
+      "last_updated": "2026-06-27T14:00:00Z",
+      "version": 2,
+      "revision_reason": "Review feedback: paradoja temporal Wave 5 corregida (SK-VERIFY→Wave 6), acceptance_criteria añadidas, comando install con --source y tag explícito, backup pre-init, schema contract documentado",
+      "source": [
+        "https://github.com/github/spec-kit",
+        "https://github.com/github/spec-kit/blob/main/AGENTS.md",
+        "https://github.com/github/spec-kit/blob/main/src/specify_cli/integrations/opencode/__init__.py",
+        "https://github.com/github/spec-kit/blob/main/src/specify_cli/integrations/__init__.py",
+        "https://github.com/github/spec-kit/blob/main/src/specify_cli/integrations/base.py",
+        "user_context: gem-team orchestrator description",
+        "review_feedback: 20260627-spec-kit-gemteam-integration-review"
+      ]
+    },
+    "scope": {
+      "purpose": [
+        "Integrar Spec Kit (Spec-Driven Development toolkit de GitHub) con gem-team (orquestador multi-agente)",
+        "Permitir que gem-team descubra, lea y procese artifacts de Spec Kit como contexto nativo en sus fases",
+        "Automatizar el flujo constitution → specify → plan → tasks → implement usando agentes gem-team",
+        "Crear skills de opencode que orquesten el pipeline completo",
+        "Documentar schema contract de context_envelope.json como contrato de salida del bridge"
+      ],
+      "applies_to": [
+        "E:\\Proyecto Hoteles",
+        "Proyectos que usen gem-team como orquestador y Spec Kit para SDD"
+      ],
+      "non_goals": [
+        "No se modifica el código fuente de Spec Kit (integración externa vía configuración)",
+        "No se crea un nuevo integration subpackage en Spec Kit (opencode ya existe como built-in)",
+        "No se implementa lógica de negocio del proyecto hoteles"
+      ]
+    },
+    "tech_stack": [
+      {
+        "name": "specify-cli",
+        "version": "latest tag de github/github/spec-kit (instalado con uv --source git+https://...@<tag>)",
+        "usage_context": "CLI principal de Spec Kit para bootstrap, init, y gestión de integraciones",
+        "config_files": [".specify/"]
+      },
+      {
+        "name": "Python",
+        "version": "3.12.10",
+        "usage_context": "Runtime de specify CLI y scripts de context bridge",
+        "config_files": []
+      },
+      {
+        "name": "uv",
+        "version": "0.11.7",
+        "usage_context": "Package manager para instalar specify-cli como tool global (usa --source en lugar de --from)",
+        "config_files": []
+      },
+      {
+        "name": "opencode",
+        "version": "latest",
+        "usage_context": "AI coding agent con plugin superpowers; destino de la integración opencode de Spec Kit",
+        "config_files": [".opencode/commands/", "opencode.json"]
+      }
+    ],
+    "conventions": [
+      "Los comandos Spec Kit se instalan en .opencode/commands/speckit.<name>.md (formato Markdown con frontmatter YAML)",
+      "Spec Kit usa <!-- SPECKIT START --> / <!-- SPECKIT END --> como markers en AGENTS.md",
+      "Los artifacts de especificación van en specs/<feature>/: spec.md, plan.md, tasks.md, contracts/, data-model.md",
+      "La memoria/constitucion del proyecto va en .specify/memory/constitution.md",
+      "gem-team phases: Phase 0 (Init&Clarify) → Phase 1 (Route) → Phase 2 (Planning) → Phase 3 (Execution) → Phase 4 (Output)",
+      "El context_envelope.json es el contrato de contexto entre fases de gem-team",
+      "BACKUP: antes de specify init . --force, se hace backup de .opencode/commands/ → .opencode/commands.bak/ y AGENTS.md → AGENTS.md.bak",
+      "INSTALL: uv tool install specify-cli --source git+https://github.com/github/spec-kit.git@<tag> en lugar de --from",
+      "VERIFY: SK-VERIFY se ejecuta en Wave 6 (post-review), nunca en paralelo con SK-REVIEW"
+    ],
+    "constraints": {
+      "hard": [
+        "Python >= 3.11 requerido por specify-cli",
+        "uv requerido para instalación de specify CLI",
+        "Git requerido (Spec Kit crea branches por feature, y se necesita git ls-remote para obtener tag)",
+        "Windows 10/11 (SO actual: Win32)",
+        "Se debe obtener el último tag vía git ls-remote antes de instalar"
+      ],
+      "soft": [
+        "Preferir MarkdownIntegration como base (opencode ya usa este patrón)",
+        "Evitar modificar archivos del core de Spec Kit",
+        "Hacer backup de .opencode/commands/ antes de cualquier specify init",
+        "Documentar rollback steps en output de SK-INIT"
+      ],
+      "compatibility": [
+        "specify init . --integration opencode funciona out-of-the-box (integración built-in existente)",
+        "specify init en Windows puede tener diferencias en paths (usar --force para evitar prompts interactivos)",
+        "Backup pre-init asegura rollback si --force sobrescribe configuraciones existentes"
+      ],
+      "security_requirements": []
+    },
+    "architecture_snapshot": {
+      "key_dirs": {
+        "post_init_paths": [
+          ".specify/memory/",
+          ".specify/templates/",
+          ".specify/scripts/bash/",
+          ".specify/scripts/powershell/",
+          ".opencode/commands/",
+          "specs/<feature>/",
+          "specs/<feature>/contracts/"
+        ],
+        "backup_paths": [
+          ".opencode/commands.bak/ (backup pre-init)",
+          "AGENTS.md.bak (backup pre-init)"
+        ],
+        "bridge_artifacts": [
+          ".specify/scripts/powershell/update-context-bridge.ps1",
+          ".specify/scripts/powershell/context_envelope.schema.json"
+        ]
+      },
+      "patterns": [
+        "Spec Kit Markdown commands: archivos .md con frontmatter YAML (description:) y placeholders {SCRIPT}, $ARGUMENTS",
+        "Opencode run pattern: opencode run --command <name> [args]",
+        "Gem-team DAG waves: tareas paralelizadas por wave con dependencias explícitas",
+        "Backup pre-init: copia de .opencode/commands/ y AGENTS.md antes de specify init --force",
+        "Tag-based install: git ls-remote --tags → uv tool install con --source ...@<tag>"
+      ],
+      "key_components": [
+        {
+          "name": "OpencodeIntegration",
+          "location": "specify-cli/src/specify_cli/integrations/opencode/__init__.py",
+          "responsibility": [
+            "Define cómo Spec Kit instala comandos en opencode",
+            "Configura .opencode/commands/ como directorio de comandos",
+            "Usa AGENTS.md como context_file",
+            "Implementa build_exec_args para invocar opencode run --command"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "name": "specify CLI",
+          "location": "instalado vía uv tool install --source git+https://...@<tag>",
+          "responsibility": [
+            "Bootstrap de proyectos Spec Kit",
+            "Gestión de integraciones (init, list, install, uninstall)",
+            "Gestión de extensiones, presets, bundles"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "name": ".gem-team.yaml",
+          "location": "raíz del proyecto (por crear en SK-GEMTEAM-CONFIG)",
+          "responsibility": [
+            "Configurar orquestador gem-team",
+            "Mapear fases Spec Kit a fases gem-team",
+            "Definir rutas de artifacts y context_sources"
+          ],
+          "confidence": 0.7
+        },
+        {
+          "name": "context_envelope.json bridge",
+          "location": "generado por .specify/scripts/powershell/update-context-bridge.ps1",
+          "responsibility": [
+            "Bridge de contexto entre Spec Kit artifacts y gem-team phases",
+            "Cache de descubrimiento para evitar re-discovery",
+            "Schema contract documentado en el script: campos obligatorios, tipos, origen"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "name": "context_envelope.schema.json",
+          "location": ".specify/scripts/powershell/context_envelope.schema.json",
+          "responsibility": [
+            "Schema de validación JSON para context_envelope.json",
+            "Define estructura esperada: meta, scope, tech_stack, conventions, constraints, architecture_snapshot, research_digest"
+          ],
+          "confidence": 0.9
+        }
+      ]
+    },
+    "research_digest": {
+      "relevant_files": [
+        {
+          "path": ".specify/memory/constitution.md",
+          "purpose": ["Principios rectores del proyecto, decisiones técnicas, guidelines"],
+          "why_relevant": ["Fuente primaria de contexto para Phase 0 de gem-team. Mapeado a conventions, prior_decisions, constraints"],
+          "key_elements": [
+            {"element": "Project Principles", "type": "section", "location": ".specify/memory/constitution.md", "description": "Governing principles and development guidelines"},
+            {"element": "Tech Decisions", "type": "section", "location": ".specify/memory/constitution.md", "description": "Decisiones técnicas registradas → prior_decisions"},
+            {"element": "Guidelines", "type": "section", "location": ".specify/memory/constitution.md", "description": "Reglas y constraints del proyecto → constraints.hard"}
+          ],
+          "security_sensitivity": "none",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        },
+        {
+          "path": "specs/<feature>/spec.md",
+          "purpose": ["Especificación funcional del feature con user stories y requirements"],
+          "why_relevant": ["Define requisitos que gem-team debe implementar. Mapeado a research_digest.domain_context y scope.purpose"],
+          "key_elements": [
+            {"element": "User Stories", "type": "section", "location": "specs/<feature>/spec.md", "description": "Requisitos funcionales del feature"},
+            {"element": "Acceptance Criteria", "type": "section", "location": "specs/<feature>/spec.md", "description": "Criterios de aceptación → research_digest.domain_context"}
+          ],
+          "security_sensitivity": "none",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        },
+        {
+          "path": "specs/<feature>/plan.md",
+          "purpose": ["Plan de implementación técnica con tech_stack, arquitectura, riesgos"],
+          "why_relevant": ["Input directo para gem-planner en Phase 2. Mapeado a tech_stack, architecture_snapshot, open_questions"],
+          "key_elements": [
+            {"element": "Tech Stack", "type": "section", "location": "specs/<feature>/plan.md", "description": "Tecnologías usadas"},
+            {"element": "Architecture", "type": "section", "location": "specs/<feature>/plan.md", "description": "Diagrama y descripción arquitectónica"},
+            {"element": "Risks", "type": "section", "location": "specs/<feature>/plan.md", "description": "Riesgos identificados → open_questions"}
+          ],
+          "security_sensitivity": "none",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        },
+        {
+          "path": "specs/<feature>/tasks.md",
+          "purpose": ["Desglose de tareas ejecutables con dependencias"],
+          "why_relevant": ["Define tareas que gem-team distribuye entre agentes en Phase 3. Mapeado a DAG de tareas"],
+          "key_elements": [
+            {"element": "Task Breakdown", "type": "section", "location": "specs/<feature>/tasks.md", "description": "Lista de tareas con dependencias y parallel execution markers"}
+          ],
+          "security_sensitivity": "none",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        },
+        {
+          "path": ".opencode/commands/speckit.constitution.md",
+          "purpose": ["Comando speckit.constitution para opencode"],
+          "why_relevant": ["Integración nativa Spec Kit → opencode, invocable por gem-team"],
+          "key_elements": [
+            {"element": "Slash Command", "type": "file", "location": ".opencode/commands/speckit.constitution.md", "description": "Comando Markdown con frontmatter YAML para speckit.constitution"}
+          ],
+          "security_sensitivity": "none",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        },
+        {
+          "path": "AGENTS.md",
+          "purpose": ["Contexto de integración para coding agents. Spec Kit gestiona sección SPECKIT; gem-team extiende dentro de markers"],
+          "why_relevant": ["Documentación de integración gem-team insertada DENTRO de <!-- SPECKIT START/END -->"],
+          "key_elements": [
+            {"element": "SPECKIT Section", "type": "section", "location": "AGENTS.md", "description": "Managed context section for Spec Kit commands"},
+            {"element": "Gem-Team Section", "type": "section", "location": "AGENTS.md", "description": "Documentación de integración gem-team (Phase 0-4, comandos, artifact mapping)"}
+          ],
+          "security_sensitivity": "none",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        },
+        {
+          "path": ".specify/scripts/powershell/update-context-bridge.ps1",
+          "purpose": ["Script que lee artifacts Spec Kit y genera context_envelope.json con schema contract documentado"],
+          "why_relevant": ["Ejecutable post-Spec-Kit para mantener context_envelope.json sincronizado con artifacts"],
+          "key_elements": [
+            {"element": "Schema Contract", "type": "section", "location": ".specify/scripts/powershell/update-context-bridge.ps1", "description": "Documentación de campos obligatorios, tipos, y mapping artifact → field"},
+            {"element": "Parsing Logic", "type": "function", "location": ".specify/scripts/powershell/update-context-bridge.ps1", "description": "Funciones de parseo para constitution.md, spec.md, data-model.md, contracts/"}
+          ],
+          "security_sensitivity": "none",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 0.9
+        },
+        {
+          "path": ".specify/scripts/powershell/context_envelope.schema.json",
+          "purpose": ["Schema de validación JSON Schema para context_envelope.json"],
+          "why_relevant": ["Permite validación automática post-generación del bridge"],
+          "key_elements": [],
+          "security_sensitivity": "none",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 0.9
+        }
+      ],
+      "patterns_found": [
+        {
+          "name": "MarkdownIntegration pattern",
+          "category": "Spec Kit Integration",
+          "confidence": 1.0,
+          "source": "codebase_analysis",
+          "example_location": ["src/specify_cli/integrations/opencode/__init__.py"]
+        },
+        {
+          "name": "Gem-team DAG wave pattern",
+          "category": "Orchestration",
+          "confidence": 0.8,
+          "source": "doc",
+          "example_location": ["plan.yaml waves 1-6"]
+        },
+        {
+          "name": "Context envelope bridge pattern",
+          "category": "Integration Architecture",
+          "confidence": 0.8,
+          "source": "design",
+          "example_location": [".specify/scripts/powershell/update-context-bridge.ps1"]
+        },
+        {
+          "name": "Backup pre-init pattern",
+          "category": "Risk Mitigation",
+          "confidence": 1.0,
+          "source": "review_feedback",
+          "example_location": ["SK-INIT pre_init_backup steps"]
+        },
+        {
+          "name": "Tag-based install pattern",
+          "category": "Dependency Management",
+          "confidence": 1.0,
+          "source": "review_feedback",
+          "example_location": ["SK-INSTALL steps"]
+        }
+      ],
+      "dependencies": {
+        "internal": [
+          ".gem-team.yaml → AGENTS.md (context_sources reference)",
+          ".gem-team.yaml → .opencode/commands/ (command routing)",
+          "context_envelope.json → .specify/memory/ (context source)",
+          "context_envelope.json → specs/ (plan/tasks source)",
+          "update-context-bridge.ps1 → context_envelope.schema.json (validation)",
+          ".opencode/commands.bak/ ← SK-INIT (backup pre-init)"
+        ],
+        "external": [
+          "specify-cli (Python package via git+https://github.com/github/spec-kit.git@<tag>)",
+          "uv (package manager)",
+          "Python 3.11+",
+          "Git"
+        ]
+      },
+      "gotchas": [
+        {
+          "text": "specify init en modo no-interactivo necesita --force; backup pre-init de .opencode/commands/ y AGENTS.md mitiga riesgo de sobreescritura",
+          "confidence": 0.95
+        },
+        {
+          "text": "En Windows, 'specify init' puede tener problemas con paths y permisos; --ignore-agent-tools si falla detección de CLI",
+          "confidence": 0.7
+        },
+        {
+          "text": "La integración opencode en Spec Kit usa MarkdownIntegration con key='opencode' y requires_cli=True, detecta binario 'opencode' en PATH",
+          "confidence": 1.0
+        },
+        {
+          "text": "specify init crea AGENTS.md con <!-- SPECKIT START/END -->; modificaciones FUERA de esos markers se preservan en upgrades",
+          "confidence": 0.9
+        },
+        {
+          "text": "uv tool install --source git+https://...@<tag> requiere que el tag exista; si falla, hacer fallback a main",
+          "confidence": 0.8
+        },
+        {
+          "text": "SK-VERIFY NO debe ejecutarse en paralelo con SK-REVIEW (Wave 5 vs Wave 6) para evitar paradoja temporal",
+          "confidence": 1.0
+        }
+      ],
+      "domain_context": {
+        "security_considerations": [],
+        "testing_patterns": {
+          "framework": "pytest",
+          "coverage_areas": ["integration setup", "command installation", "context file management"],
+          "test_organization": "tests/integrations/test_integration_opencode.py",
+          "mock_patterns": []
+        },
+        "error_handling": "Spec Kit CLI maneja errores con typer+rich; fallos de integración se reportan con console.print. Rollback: restaurar .opencode/commands.bak/ y AGENTS.md.bak",
+        "data_flow": "git ls-remote --tags → uv tool install specify-cli@<tag> → specify init . --integration opencode --force (con backup previo) → escribe comandos en .opencode/commands/ → upsert contexto en AGENTS.md → update-context-bridge.ps1 genera context_envelope.json"
+      },
+      "open_questions": [
+        {
+          "question": "¿Cuál es el último tag de github/github/spec-kit?",
+          "context": "Se obtiene vía git ls-remote --tags en SK-INSTALL. Sin tag disponible, fallback a main.",
+          "type": "decision_blocker",
+          "affects": ["SK-INSTALL"]
+        },
+        {
+          "question": "¿specify init . --integration opencode funciona en Windows sin errores de PATH?",
+          "context": "requires_cli=True en OpencodeIntegration necesita opencode en PATH detectable por shutil.which()",
+          "type": "decision_blocker",
+          "affects": ["SK-INIT", "SK-VERIFY"]
+        },
+        {
+          "question": "¿Cuál es el schema exacto de .gem-team.yaml?",
+          "context": "Formato inferido de descripción del orquestador; puede requerir ajuste post-review",
+          "type": "decision_blocker",
+          "affects": ["SK-GEMTEAM-CONFIG"]
+        }
+      ]
+    },
+    "prior_decisions": [
+      {
+        "decision": "Usar integración opencode built-in de Spec Kit en lugar de crear integración custom",
+        "rationale": [
+          "Ya existe OpencodeIntegration completa en src/specify_cli/integrations/opencode/",
+          "Soporta MarkdownIntegration, build_exec_args custom, y context_file = AGENTS.md",
+          "Está registrada en _register_builtins() y disponible via specify init --integration opencode"
+        ],
+        "evidence": ["src/specify_cli/integrations/opencode/__init__.py", "src/specify_cli/integrations/__init__.py"],
+        "confidence": 1.0,
+        "linked_constraints": ["Usar MarkdownIntegration como base"],
+        "linked_patterns": ["MarkdownIntegration pattern"]
+      },
+      {
+        "decision": "Usar uv tool install --source git+https://...@<tag> en lugar de --from git+https://... (review feedback)",
+        "rationale": [
+          "--source es la opción correcta de uv tool install para especificar origen",
+          "Tag explícito evita instalar commits no versionados de main",
+          "Si no hay tag, fallback a main"
+        ],
+        "evidence": ["review_feedback", "uv tool install --help"],
+        "confidence": 1.0,
+        "linked_constraints": ["Obtener tag vía git ls-remote antes de instalar"],
+        "linked_patterns": ["Tag-based install pattern"]
+      },
+      {
+        "decision": "Backup de .opencode/commands/ y AGENTS.md antes de specify init . --force (review feedback)",
+        "rationale": [
+          "--force sobrescribe configuraciones existentes sin confirmación",
+          "Backup permite rollback completo si la inicialización daña configuraciones previas",
+          "Rollback steps documentados en el output de SK-INIT"
+        ],
+        "evidence": ["review_feedback", "SK-INIT details.pre_init_backup"],
+        "confidence": 1.0,
+        "linked_constraints": ["Backup pre-init obligatorio en SK-INIT"],
+        "linked_patterns": ["Backup pre-init pattern"]
+      },
+      {
+        "decision": "SK-VERIFY en Wave 6 separado de SK-REVIEW en Wave 5 (review feedback)",
+        "rationale": [
+          "SK-VERIFY depende de SK-REVIEW (necesita pasar review primero)",
+          "Mantenerlas en misma wave crea paradoja temporal",
+          "Wave 5: solo review. Wave 6: verify post-review."
+        ],
+        "evidence": ["review_feedback: paradoja temporal crítica"],
+        "confidence": 1.0,
+        "linked_constraints": ["SK-VERIFY.wave=6, SK-REVIEW.wave=5"],
+        "linked_patterns": ["Gem-team DAG wave pattern"]
+      },
+      {
+        "decision": "Documentar schema/contrato de salida de context_envelope.json en el bridge (review feedback)",
+        "rationale": [
+          "Futuros agentes necesitan conocer estructura esperada sin re-descubrimiento",
+          "Schema contract en el script + context_envelope.schema.json como schema de validación",
+          "Campos obligatorios vs opcionales, tipos, origen documentados explícitamente"
+        ],
+        "evidence": ["review_feedback: schema context_envelope.json"],
+        "confidence": 1.0,
+        "linked_constraints": ["SK-CONTEXT-BRIDGE debe incluir schema contract"],
+        "linked_patterns": ["Context envelope bridge pattern"]
+      },
+      {
+        "decision": "Agrupar tasks en 6 waves lógicas en lugar de 5",
+        "rationale": [
+          "Wave 1 (paralelo): install + research sin dependencias",
+          "Wave 2: init (con backup) + config dependen de Wave 1",
+          "Wave 3: doc + skills dependen de tener Spec Kit inicializado y config listo",
+          "Wave 4: context bridge + schema contract dependen de documentación y skills",
+          "Wave 5: review (solo)",
+          "Wave 6: verify (post-review, no paralelo con review)"
+        ],
+        "evidence": ["Plan DAG analysis + review feedback"],
+        "confidence": 1.0,
+        "linked_constraints": [],
+        "linked_patterns": ["Gem-team DAG wave pattern"]
+      }
+    ],
+    "reuse_notes": [
+      {"path": "https://github.com/github/spec-kit/blob/main/AGENTS.md", "trust": "high"},
+      {"path": "https://github.com/github/spec-kit/blob/main/src/specify_cli/integrations/opencode/__init__.py", "trust": "high"},
+      {"path": "https://github.com/github/spec-kit/blob/main/src/specify_cli/integrations/base.py", "trust": "high"},
+      {"path": "docs/plan/20260627-spec-kit-gemteam-integration/plan.yaml", "trust": "high"},
+      {"path": ".specify/scripts/powershell/update-context-bridge.ps1", "trust": "medium"}
+    ]
+  }
+}

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HotelManager · Reportes</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="components.css" />
+  <link rel="stylesheet" href="mobile.css" />
+</head>
+<body>
+  <div class="stage">
+    <div class="stage__caption">mobile-6 · <strong>Reportes</strong></div>
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="status-bar__icons">
+          <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><path d="M1 9h2V5H1zM5 9h2V3H5zM9 9h2V1H9zM13 9h2V-3h-2z"/></svg>
+          <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><path d="M7 3.5L1 7v2h12V7L7 3.5z"/></svg>
+          <svg width="20" height="10" viewBox="0 0 20 10" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="0.5" y="0.5" width="16" height="9" rx="2"/><rect x="2" y="2" width="11" height="6" rx="1" fill="currentColor"/><rect x="17.5" y="3" width="1.5" height="4" fill="currentColor"/></svg>
+        </div>
+      </div>
+
+      <header class="app-header">
+        <div>
+          <h1 class="app-header__title">Reportes</h1>
+          <div class="app-header__sub">Junio 2025</div>
+        </div>
+        <div class="app-header__actions">
+          <button style="width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--text);display:grid;place-items:center" aria-label="Exportar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="screen">
+        <div class="scroll scroll--tight">
+          <div class="kpi-strip">
+            <div class="kpi-mini kpi-mini--featured">
+              <div class="kpi-mini__label">Ingresos del mes</div>
+              <div class="kpi-mini__value">$96.4M</div>
+              <div class="kpi-mini__delta">+18% vs mayo</div>
+            </div>
+            <div class="kpi-mini">
+              <div class="kpi-mini__label">Ocupación promedio</div>
+              <div class="kpi-mini__value">76%</div>
+              <div class="kpi-mini__delta" style="color:var(--success)">+6 puntos</div>
+            </div>
+          </div>
+
+          <div class="segmented">
+            <button class="segmented__item segmented__item--active">Mes</button>
+            <button class="segmented__item">Trimestre</button>
+            <button class="segmented__item">Año</button>
+          </div>
+
+          <div class="report-card">
+            <div class="report-card__head">
+              <div>
+                <div class="report-card__title">Ingresos por día</div>
+                <div class="report-card__sub">$96.4M en junio</div>
+              </div>
+              <span class="badge badge--info"><span class="badge__dot"></span>Día</span>
+            </div>
+            <div class="bar-chart" style="height:140px">
+              <div class="bar-chart__grid">
+                <div class="bar-chart__line" style="bottom:75%"></div>
+                <div class="bar-chart__line" style="bottom:50%"></div>
+                <div class="bar-chart__line" style="bottom:25%"></div>
+              </div>
+              <div class="bar-chart__bars">
+                <div class="bar-chart__col"><div class="bar-chart__bar" style="height:40%"></div><div class="bar-chart__label">1</div></div>
+                <div class="bar-chart__col"><div class="bar-chart__bar" style="height:55%"></div><div class="bar-chart__label">5</div></div>
+                <div class="bar-chart__col"><div class="bar-chart__bar" style="height:48%"></div><div class="bar-chart__label">10</div></div>
+                <div class="bar-chart__col"><div class="bar-chart__bar" style="height:65%"></div><div class="bar-chart__label">15</div></div>
+                <div class="bar-chart__col"><div class="bar-chart__bar" style="height:75%"></div><div class="bar-chart__label">20</div></div>
+                <div class="bar-chart__col"><div class="bar-chart__bar" style="height:60%"></div><div class="bar-chart__label">25</div></div>
+                <div class="bar-chart__col"><div class="bar-chart__bar bar-chart__bar--today" style="height:88%"></div><div class="bar-chart__label">30</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="report-card">
+            <div class="report-card__head">
+              <div>
+                <div class="report-card__title">Canales de reserva</div>
+                <div class="report-card__sub">Últimos 30 días</div>
+              </div>
+            </div>
+            <div class="donut-wrap" style="grid-template-columns:140px 1fr">
+              <div class="donut" style="width:140px;height:140px">
+                <svg viewBox="0 0 200 200" class="donut__svg">
+                  <circle cx="100" cy="100" r="78" fill="none" stroke="var(--surface-2)" stroke-width="22"/>
+                  <circle cx="100" cy="100" r="78" fill="none" stroke="var(--slate-700)" stroke-width="22"
+                    stroke-dasharray="294 490" stroke-dashoffset="0" transform="rotate(-90 100 100)" stroke-linecap="round"/>
+                  <circle cx="100" cy="100" r="78" fill="none" stroke="var(--terracota-500)" stroke-width="22"
+                    stroke-dasharray="157 627" stroke-dashoffset="-298" transform="rotate(-90 100 100)" stroke-linecap="round"/>
+                  <circle cx="100" cy="100" r="78" fill="none" stroke="var(--sage-500)" stroke-width="22"
+                    stroke-dasharray="98 686" stroke-dashoffset="-459" transform="rotate(-90 100 100)" stroke-linecap="round"/>
+                </svg>
+                <div class="donut__center">
+                  <div class="donut__center-value" style="font-size:24px">312</div>
+                  <div class="donut__center-label" style="font-size:10px">reservas</div>
+                </div>
+              </div>
+              <ul class="donut-legend" style="gap:6px">
+                <li style="padding:4px 8px">
+                  <span class="donut-legend__swatch" style="background:var(--slate-700)"></span>
+                  <div class="donut-legend__body">
+                    <div class="donut-legend__name" style="font-size:12px">Directo</div>
+                  </div>
+                  <div class="donut-legend__value" style="font-size:13px">60%</div>
+                </li>
+                <li style="padding:4px 8px">
+                  <span class="donut-legend__swatch" style="background:var(--terracota-500)"></span>
+                  <div class="donut-legend__body">
+                    <div class="donut-legend__name" style="font-size:12px">Booking.com</div>
+                  </div>
+                  <div class="donut-legend__value" style="font-size:13px">32%</div>
+                </li>
+                <li style="padding:4px 8px">
+                  <span class="donut-legend__swatch" style="background:var(--sage-500)"></span>
+                  <div class="donut-legend__body">
+                    <div class="donut-legend__name" style="font-size:12px">WhatsApp</div>
+                  </div>
+                  <div class="donut-legend__value" style="font-size:13px">8%</div>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Premium / locked card -->
+          <div class="report-card" style="position:relative;overflow:hidden">
+            <div class="lock-badge">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+              PRO
+            </div>
+            <div class="report-card__head">
+              <div>
+                <div class="report-card__title">Revenue forecast</div>
+                <div class="report-card__sub">Proyección 30 días · IA predictiva</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:6px;height:90px;margin-top:var(--sp-2);filter:blur(3px)">
+              <div style="flex:1;height:40%;background:var(--primary);border-radius:4px 4px 0 0"></div>
+              <div style="flex:1;height:55%;background:var(--primary);border-radius:4px 4px 0 0"></div>
+              <div style="flex:1;height:48%;background:var(--primary);border-radius:4px 4px 0 0"></div>
+              <div style="flex:1;height:70%;background:var(--terracota-500);border-radius:4px 4px 0 0"></div>
+              <div style="flex:1;height:65%;background:var(--terracota-500);border-radius:4px 4px 0 0"></div>
+              <div style="flex:1;height:80%;background:var(--terracota-500);border-radius:4px 4px 0 0"></div>
+              <div style="flex:1;height:88%;background:var(--terracota-500);border-radius:4px 4px 0 0"></div>
+            </div>
+            <div style="background:#E5E7EB;padding:14px;border-radius:10px;margin-top:var(--sp-4);text-align:center">
+              <div style="font-size:12px;font-weight:600;color:#6B6B80;margin-bottom:6px">Mejora tu plan para acceder</div>
+              <button class="btn btn--primary btn--sm">Ver plan Pro</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="bottom-nav">
+        <a class="bottom-nav__item" href="mobile-2.html">
+          <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>
+          Panel
+        </a>
+        <a class="bottom-nav__item" href="mobile-3.html">
+          <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></span>
+          Reservas
+        </a>
+        <a class="bottom-nav__item" href="mobile-4.html">
+          <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 18V8l9-5 9 5v10M9 21v-6h6v6"/></svg></span>
+          Habitaciones
+        </a>
+        <a class="bottom-nav__item" href="mobile-5.html">
+          <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          Huéspedes
+        </a>
+        <a class="bottom-nav__item bottom-nav__item--active" href="mobile-6.html">
+          <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M7 14l4-4 4 4 5-5"/></svg></span>
+          Reportes
+        </a>
+      </nav>
+
+      <div class="home-indicator"><div class="home-indicator__bar"></div></div>
+    </div>
+  </div>
+</body>
+</html>

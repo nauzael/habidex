@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HotelManager · Habitaciones</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="components.css" />
+  <link rel="stylesheet" href="mobile.css" />
+</head>
+<body>
+  <div class="stage">
+    <div class="stage__caption">mobile-4 · <strong>Habitaciones</strong></div>
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="status-bar__icons">
+          <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><path d="M1 9h2V5H1zM5 9h2V3H5zM9 9h2V1H9zM13 9h2V-3h-2z"/></svg>
+          <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><path d="M7 3.5L1 7v2h12V7L7 3.5z"/></svg>
+          <svg width="20" height="10" viewBox="0 0 20 10" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="0.5" y="0.5" width="16" height="9" rx="2"/><rect x="2" y="2" width="11" height="6" rx="1" fill="currentColor"/><rect x="17.5" y="3" width="1.5" height="4" fill="currentColor"/></svg>
+        </div>
+      </div>
+
+      <header class="app-header">
+        <div>
+          <h1 class="app-header__title">Habitaciones</h1>
+          <div class="app-header__sub">Piso 2 · 12 habitaciones</div>
+        </div>
+        <div class="app-header__actions">
+          <button style="width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--text);display:grid;place-items:center" aria-label="Filtrar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 3H2l8 9.5V19l4 2v-8.5L22 3z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="screen">
+        <div class="scroll scroll--tight">
+          <div class="chips">
+            <button class="chip chip--active">Todas <span class="chip__count">12</span></button>
+            <button class="chip">Ocupadas <span class="chip__count">7</span></button>
+            <button class="chip">Disponibles <span class="chip__count">3</span></button>
+            <button class="chip">Limpieza <span class="chip__count">2</span></button>
+            <button class="chip">Mantenimiento <span class="chip__count">1</span></button>
+          </div>
+
+          <div class="kpi-strip">
+            <div class="kpi-mini kpi-mini--featured">
+              <div class="kpi-mini__label">Ocupación piso 2</div>
+              <div class="kpi-mini__value">58%</div>
+              <div class="kpi-mini__delta">7 de 12 habitaciones</div>
+            </div>
+            <div class="kpi-mini">
+              <div class="kpi-mini__label">Por limpiar</div>
+              <div class="kpi-mini__value">2</div>
+              <div class="kpi-mini__delta" style="color:var(--warning)">Estimado 25 min</div>
+            </div>
+          </div>
+
+          <section class="m-section">
+            <div class="m-section__head">
+              <h2 class="m-section__title">Mapa del piso</h2>
+              <button class="m-section__action">Cambiar piso</button>
+            </div>
+            <div class="room-grid">
+              <div class="room-card room-card--occupied">
+                <div class="room-card__header">
+                  <span class="room-card__number">201</span>
+                  <span class="badge badge--occupied"><span class="badge__dot"></span></span>
+                </div>
+                <div class="room-card__type">Estándar</div>
+                <div class="room-card__guest">Salida hoy</div>
+              </div>
+              <div class="room-card room-card--occupied">
+                <div class="room-card__header">
+                  <span class="room-card__number">202</span>
+                  <span class="badge badge--occupied"><span class="badge__dot"></span></span>
+                </div>
+                <div class="room-card__type">Estándar</div>
+                <div class="room-card__guest">3 noches</div>
+              </div>
+              <div class="room-card room-card--cleaning">
+                <div class="room-card__header">
+                  <span class="room-card__number">203</span>
+                  <span class="badge badge--cleaning"><span class="badge__dot"></span></span>
+                </div>
+                <div class="room-card__type">Estándar</div>
+                <div class="room-card__guest">15 min</div>
+              </div>
+              <div class="room-card room-card--available">
+                <div class="room-card__header">
+                  <span class="room-card__number">204</span>
+                  <span class="badge badge--available"><span class="badge__dot"></span></span>
+                </div>
+                <div class="room-card__type">Suite</div>
+                <div class="room-card__guest">Check-in 15:00</div>
+              </div>
+              <div class="room-card room-card--occupied">
+                <div class="room-card__header">
+                  <span class="room-card__number">205</span>
+                  <span class="badge badge--occupied"><span class="badge__dot"></span></span>
+                </div>
+                <div class="room-card__type">Suite</div>
+                <div class="room-card__guest">2 noches</div>
+              </div>
+              <div class="room-card room-card--maintenance">
+                <div class="room-card__header">
+                  <span class="room-card__number">206</span>
+                  <span class="badge badge--maintenance"><span class="badge__dot"></span></span>
+                </div>
+                <div class="room-card__type">Estándar</div>
+                <div class="room-card__guest">Aire acondicionado</div>
+              </div>
+              <div class="room-card room-card--available">
+                <div class="room-card__header">
+                  <span class="room-card__number">207</span>
+                  <span class="badge badge--available"><span class="badge__dot"></span></span>
+                </div>
+                <div class="room-card__type">Estándar</div>
+                <div class="room-card__guest">Lista</div>
+              </div>
+              <div class="room-card room-card--occupied">
+                <div class="room-card__header">
+                  <span class="room-card__number">208</span>
+                  <span class="badge badge--occupied"><span class="badge__dot"></span></span>
+                </div>
+                <div class="room-card__type">Familiar</div>
+                <div class="room-card__guest">4 huéspedes</div>
+              </div>
+              <div class="room-card room-card--cleaning">
+                <div class="room-card__header">
+                  <span class="room-card__number">209</span>
+                  <span class="badge badge--cleaning"><span class="badge__dot"></span></span>
+                </div>
+                <div class="room-card__type">Estándar</div>
+                <div class="room-card__guest">5 min</div>
+              </div>
+              <div class="room-card room-card--occupied">
+                <div class="room-card__header">
+                  <span class="room-card__number">210</span>
+                  <span class="badge badge--occupied"><span class="badge__dot"></span></span>
+                </div>
+                <div class="room-card__type">Suite</div>
+                <div class="room-card__guest">Salida mañana</div>
+              </div>
+              <div class="room-card room-card--available">
+                <div class="room-card__header">
+                  <span class="room-card__number">211</span>
+                  <span class="badge badge--available"><span class="badge__dot"></span></span>
+                </div>
+                <div class="room-card__type">Familiar</div>
+                <div class="room-card__guest">Lista</div>
+              </div>
+              <div class="room-card room-card--occupied">
+                <div class="room-card__header">
+                  <span class="room-card__number">212</span>
+                  <span class="badge badge--occupied"><span class="badge__dot"></span></span>
+                </div>
+                <div class="room-card__type">Estándar</div>
+                <div class="room-card__guest">Salida hoy</div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <nav class="bottom-nav">
+        <a class="bottom-nav__item" href="mobile-2.html">
+          <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>
+          Panel
+        </a>
+        <a class="bottom-nav__item" href="mobile-3.html">
+          <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></span>
+          Reservas
+        </a>
+        <a class="bottom-nav__item bottom-nav__item--active" href="mobile-4.html">
+          <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 18V8l9-5 9 5v10M9 21v-6h6v6"/></svg></span>
+          Habitaciones
+        </a>
+        <a class="bottom-nav__item" href="mobile-5.html">
+          <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          Huéspedes
+        </a>
+        <a class="bottom-nav__item" href="mobile-6.html">
+          <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M7 14l4-4 4 4 5-5"/></svg></span>
+          Reportes
+        </a>
+      </nav>
+
+      <div class="home-indicator"><div class="home-indicator__bar"></div></div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,737 @@
+{
+  "context_envelope": {
+    "meta": {
+      "plan_id": "20260627-hotel-platform-architecture",
+      "created_at": "2026-06-27T22:00:00Z",
+      "last_updated": "2026-06-27T22:00:00Z",
+      "version": 1,
+      "source": [
+        "User-provided functional specification (secciones 2.1-2.5, 4.1-4.4)",
+        "Spec Kit SDD workflow templates (.specify/templates/)",
+        "Project constitution (.specify/memory/constitution.md — template)",
+        "AGENTS.md (Spec Kit + gem-team integration context)"
+      ]
+    },
+    "scope": {
+      "purpose": [
+        "Definir arquitectura técnica, stack tecnológico, modelo de datos, y roadmap para plataforma B2B SaaS de gestión hotelera (Channel Manager + Revenue Management)",
+        "Proveer contexto reutilizable para agentes de implementación futuros: decisiones de arquitectura, stack con versiones, bounded contexts",
+        "Establecer base de conocimiento de dominio hotelero para evitar re-discovery en fases posteriores"
+      ],
+      "applies_to": [
+        "Plataforma B2B Hotelera — Channel Manager + Revenue Management",
+        "Mercado: hoteles independientes en LATAM (México, Colombia inicialmente)",
+        "Todas las fases del proyecto (MVP Fase 1 → Scale Fase 4)"
+      ],
+      "non_goals": [
+        "No cubre implementación de código (esto es diseño y planificación)",
+        "No define UI/UX detallada (solo arquitectura frontend a alto nivel)",
+        "No incluye contratos legales con OTAs o proveedores",
+        "Mobile nativa no está en scope inicial (web-first, considerar en Fase 4)"
+      ]
+    },
+    "tech_stack": [
+      {
+        "name": "Node.js",
+        "version": "22 LTS",
+        "usage_context": "Backend runtime principal para API services",
+        "config_files": ["package.json", "tsconfig.json"]
+      },
+      {
+        "name": "TypeScript",
+        "version": "5.5+",
+        "usage_context": "Lenguaje principal para backend y frontend, tipado estricto",
+        "config_files": ["tsconfig.json"]
+      },
+      {
+        "name": "NestJS",
+        "version": "11",
+        "usage_context": "Framework backend enterprise con módulos, guards, interceptors, OpenAPI integrado",
+        "config_files": ["nest-cli.json"]
+      },
+      {
+        "name": "React",
+        "version": "19",
+        "usage_context": "Frontend UI library para dashboards y admin panels",
+        "config_files": []
+      },
+      {
+        "name": "Next.js",
+        "version": "15 (App Router)",
+        "usage_context": "Framework frontend con SSR/SSG, React Server Components",
+        "config_files": ["next.config.js"]
+      },
+      {
+        "name": "Tailwind CSS",
+        "version": "4",
+        "usage_context": "Utility-first CSS framework para UI consistente",
+        "config_files": ["tailwind.config.js"]
+      },
+      {
+        "name": "PostgreSQL",
+        "version": "16",
+        "usage_context": "Base de datos transaccional principal (ACID, multi-tenancy, particionamiento)",
+        "config_files": [".env.example"]
+      },
+      {
+        "name": "TimescaleDB",
+        "version": "2.x",
+        "usage_context": "Extensión PostgreSQL para métricas time-series (occupancy, ADR, RevPAR)",
+        "config_files": []
+      },
+      {
+        "name": "Redis",
+        "version": "7.x",
+        "usage_context": "Caché de disponibilidad (<100ms SLA), rate limiting, session store, distributed locks",
+        "config_files": []
+      },
+      {
+        "name": "Elasticsearch",
+        "version": "8.x",
+        "usage_context": "Búsqueda de hoteles, autocompletado, agregaciones para analítica",
+        "config_files": []
+      },
+      {
+        "name": "Apache Kafka",
+        "version": "3.x",
+        "usage_context": "Event backbone para sincronización de canales, event sourcing, CQRS",
+        "config_files": []
+      },
+      {
+        "name": "RabbitMQ",
+        "version": "3.x",
+        "usage_context": "Colas de tareas asíncronas con DLQ (notificaciones, exportaciones, emails)",
+        "config_files": []
+      },
+      {
+        "name": "Docker",
+        "version": "latest stable",
+        "usage_context": "Containerización de todos los servicios",
+        "config_files": ["Dockerfile", "docker-compose.yml"]
+      },
+      {
+        "name": "Kubernetes (EKS)",
+        "version": "1.31+",
+        "usage_context": "Orquestación de contenedores en AWS con auto-scaling",
+        "config_files": ["k8s/"]
+      },
+      {
+        "name": "Terraform",
+        "version": "1.9+",
+        "usage_context": "Infraestructura como código, multi-workspace (dev/staging/prod)",
+        "config_files": ["terraform/"]
+      },
+      {
+        "name": "AWS",
+        "version": "N/A",
+        "usage_context": "Cloud provider primario: EKS, RDS Aurora, ElastiCache, MSK, CloudFront, S3, Route 53",
+        "config_files": ["terraform/"]
+      },
+      {
+        "name": "Keycloak",
+        "version": "25+",
+        "usage_context": "Identity provider self-hosted: OAuth2/OIDC, RBAC, MFA, SSO",
+        "config_files": []
+      },
+      {
+        "name": "Grafana + Prometheus + Loki + Tempo",
+        "version": "latest stable",
+        "usage_context": "Observabilidad: métricas, logs, traces distribuidos con OpenTelemetry",
+        "config_files": []
+      }
+    ],
+    "conventions": [
+      "Spec Kit SDD: specs/<feature>/spec.md → plan.md → tasks.md → contracts/",
+      "Modular Monolith (Fase 1-2) → Microservicios (Fase 3+): bounded contexts con schemas PostgreSQL separados, eventos Kafka para comunicación inter-módulo",
+      "Multi-tenancy: database-per-tenant para isolation máxima; connection pooling con PgBouncer; migrations versionadas por tenant",
+      "Optimistic locking para Inventory/Rate con version column y SERIALIZABLE isolation level",
+      "Transactional outbox pattern para sincronización OTA (garantiza que todo cambio de inventario genera evento Kafka)",
+      "CQRS lite: separar reads (Redis cache + Elasticsearch) de writes (PostgreSQL) para queries de disponibilidad",
+      "API-first: OpenAPI 3.0 spec antes de implementación; Swagger UI para documentación interactiva",
+      "GitOps: ArgoCD para deployments; GitHub Actions para CI; Helm charts para todos los servicios",
+      "Observability: OpenTelemetry instrumentation en todos los servicios; Trace ID propagation en headers HTTP",
+      "Idempotency keys en todas las operaciones de booking (evitar double-booking por retries)"
+    ],
+    "constraints": {
+      "hard": [
+        "SLA consulta disponibilidad: <100ms p99 (incluyendo latencia de red)",
+        "SLA sincronización post-reserva: <5s para propagar a todos los canales",
+        "Overbooking prevention: 0 overbookings tolerados en producción",
+        "Multi-tenancy: aislamiento total de datos entre hoteles (no cross-tenant data leaks)",
+        "Disaster Recovery: RPO < 5 minutos, RTO < 30 minutos",
+        "PCI DSS compliance para manejo de datos de pago (via payment gateway tokenization)",
+        "TLS 1.3 para todo el tráfico externo; encryption at rest (AES-256) para datos sensibles",
+        "Idempotency en todas las operaciones de reserva (exact-once semantics via idempotency key + DB unique constraint)",
+        "Floor price por tipo de habitación que ninguna regla de pricing puede atravesar",
+        "Rate limiting en API pública con planes por tier (starter: 100 req/s, pro: 1000 req/s)"
+      ],
+      "soft": [
+        "Preferir soluciones open-source sobre SaaS propietario cuando la capacidad del equipo lo permita (ej: Keycloak sobre Auth0, Grafana sobre Datadog)",
+        "Evolución gradual: monolith → microservicios solo cuando métricas de escala lo justifiquen",
+        "Web-first: mobile nativa solo si métricas de uso lo demandan (Fase 4+)",
+        "Maximizar uso de managed services AWS para reducir carga operacional del equipo pequeño inicial"
+      ],
+      "compatibility": [
+        "OTA XML 2.0 (OpenTravel Alliance) para integraciones con Booking.com, Expedia, Despegar",
+        "HTNG (Hotel Technology Next Generation) para integraciones PMS",
+        "REST APIs con JSON para integraciones modernas (Airbnb, Cloudbeds, Mews)",
+        "OAuth2 + API Keys para autenticación de APIs públicas",
+        "Webhooks con HMAC signatures para notificaciones a partners",
+        "Multi-moneda: MXN, COP, USD con tasas de conversión diarias (ECB o fixer.io)"
+      ],
+      "security_requirements": [
+        "OAuth2/OIDC con PKCE para SPA frontend",
+        "API Keys con rotación automática cada 90 días para integraciones externas",
+        "Rate limiting por tenant + endpoint (Redis token bucket)",
+        "WAF (AWS Shield + WAF) en CloudFront para DDoS protection",
+        "Secrets en AWS Secrets Manager (nunca en código ni variables de entorno)",
+        "Row-level security en PostgreSQL para multi-tenancy isolation",
+        "Audit log de todos los accesos a datos de huéspedes (compliance)",
+        "Data encryption: AES-256 at rest, TLS 1.3 in transit",
+        "OWASP Top 10 mitigations: input validation, SQL injection prevention (parameterized queries), XSS prevention (CSP headers)"
+      ]
+    },
+    "architecture_snapshot": {
+      "key_dirs": {
+        "specs/001-b2b-hotel-platform/": [
+          "spec.md",
+          "plan.md",
+          "data-model.md",
+          "architecture.md",
+          "stack-decision.md",
+          "research.md",
+          "architecture-patterns.md",
+          "infrastructure-research.md",
+          "review.md",
+          "contracts/"
+        ],
+        "src/": [
+          "components/ (React UI components — dashboards, admin panels)",
+          "services/ (NestJS modules: availability, rates, bookings, channels, promotions, analytics, auth)",
+          "utils/ (helpers: OTA XML parsing, date/timezone, currency conversion, rate limit middleware)"
+        ],
+        "docs/plan/20260627-hotel-platform-architecture/": [
+          "plan.yaml (este plan de orquestación)",
+          "context_envelope.json (este archivo de contexto)"
+        ]
+      },
+      "patterns": [
+        "Modular Monolith with Bounded Contexts: cada módulo tiene su schema PostgreSQL, eventos Kafka para comunicación inter-módulo",
+        "Transactional Outbox: cambios en DB generan eventos en tabla outbox → Kafka Connect o Debezium lee y publica",
+        "CQRS Lite: queries de disponibilidad → Redis cache (read model); commands de booking → PostgreSQL (write model)",
+        "Optimistic Locking: version column en Inventory/Rate; update WHERE version = expected; retry on conflict",
+        "Pooled Inventory: single source of truth en PostgreSQL; sincronización push a OTAs vía Kafka events",
+        "Saga Pattern: reservas multi-step compensables (reservar → cobrar → notificar OTA); rollback con compensating transactions",
+        "Circuit Breaker: para llamadas a OTAs que fallan (evitar cascading failures); fallback a retry queue con exponential backoff",
+        "Adapter Pattern: channel connectors abstraen diferencias entre OTA APIs (OTA XML, REST, GraphQL)",
+        "Strategy Pattern: pricing rules intercambiables (seasonality, day-of-week, occupancy-based, etc.)"
+      ],
+      "key_components": [
+        {
+          "name": "Availability Service",
+          "location": "src/services/availability/",
+          "responsibility": [
+            "CRUD de inventario (rooms, room types, restrictions: MLOS, CTA, Stop Sell)",
+            "Pooled inventory management (single source of truth)",
+            "Consulta de disponibilidad con cache Redis (<100ms SLA)",
+            "Publica eventos inventory.changed, restriction.updated a Kafka"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "name": "Rate Service",
+          "location": "src/services/rates/",
+          "responsibility": [
+            "CRUD de rate plans (BAR, derivadas, promocionales, por canal)",
+            "Motor de pricing dinámico (reglas: estacionalidad, día, anticipación, occupancy-based)",
+            "Rate parity detection y alertas",
+            "Multi-moneda con conversión automática",
+            "Publica eventos rate.updated, rate.parity_alert a Kafka"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "name": "Booking Service",
+          "location": "src/services/bookings/",
+          "responsibility": [
+            "Gestión de reservas (creación, cancelación, modificación)",
+            "Validación de disponibilidad con lock optimista (prevención overbooking)",
+            "Idempotency via idempotency_key UNIQUE constraint",
+            "Saga orchestration para reservas multi-step",
+            "Publica eventos booking.confirmed, booking.cancelled a Kafka"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "name": "Channel Sync Service",
+          "location": "src/services/channels/",
+          "responsibility": [
+            "Conectores OTA (Booking.com, Expedia, Despegar, Airbnb) con Adapter Pattern",
+            "Sincronización bidireccional: push ARI a OTAs + escuchar webhooks de reservas",
+            "Manejo de rate limits y throttling específicos por OTA",
+            "Reconciliation job (cada 5 min) que compara inventario local vs OTA",
+            "Retry queue con exponential backoff para sincronizaciones fallidas"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "name": "Promotion Engine",
+          "location": "src/services/promotions/",
+          "responsibility": [
+            "Motor de reglas de promociones (descuentos, paquetes, early bird, last minute)",
+            "Reglas de stacking (qué promos pueden combinarse)",
+            "Validación de márgenes mínimos (floor price enforcement)",
+            "Calendario de temporadas y eventos"
+          ],
+          "confidence": 0.8
+        },
+        {
+          "name": "Analytics Service",
+          "location": "src/services/analytics/",
+          "responsibility": [
+            "Ingesta de métricas a TimescaleDB (occupancy, ADR, RevPAR, channel mix)",
+            "Dashboards con continuous aggregates materializadas",
+            "Forecasting 30/60/90 días (modelo estadístico inicial, ML en Fase 3)",
+            "Alertas configurables (rate parity, overbooking risk, caída ocupación)",
+            "Exportación CSV, PDF; integración BI tools"
+          ],
+          "confidence": 0.8
+        },
+        {
+          "name": "Auth Service",
+          "location": "src/services/auth/",
+          "responsibility": [
+            "Autenticación OAuth2/OIDC vía Keycloak",
+            "RBAC: roles (hotel_admin, hotel_staff, agency, platform_admin)",
+            "API Key management para integraciones externas",
+            "Multi-tenancy enforcement: tenant context propagation en todos los requests"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "name": "API Gateway",
+          "location": "infrastructure/kong/ o infrastructure/traefik/",
+          "responsibility": [
+            "Rate limiting por tenant + endpoint",
+            "Autenticación OAuth2 token validation",
+            "Request/response transformation",
+            "Circuit breaker para servicios internos",
+            "API versioning (v1, v2) y API deprecation headers"
+          ],
+          "confidence": 0.8
+        }
+      ]
+    },
+    "research_digest": {
+      "relevant_files": [
+        {
+          "path": "specs/001-b2b-hotel-platform/research.md",
+          "purpose": ["Investigación de dominio hotelero LATAM: OTA protocols, PMS landscape, regulación, pagos, competencia"],
+          "why_relevant": ["Fundamento de decisiones de producto y arquitectura"],
+          "key_elements": [
+            {
+              "element": "OTA Protocols comparison",
+              "type": "section",
+              "location": "specs/001-b2b-hotel-platform/research.md",
+              "description": "OTA XML 2.0, REST APIs, autenticación, rate limits, webhooks"
+            }
+          ],
+          "security_sensitivity": "internal",
+          "contains_secrets": false,
+          "reliability": "research",
+          "confidence": 0.8
+        },
+        {
+          "path": "specs/001-b2b-hotel-platform/architecture-patterns.md",
+          "purpose": ["Patrones arquitectónicos para channel managers y sistemas de alta concurrencia"],
+          "why_relevant": ["Guía de patrones aplicables: pooled inventory, optimistic locking, CQRS, event sourcing"],
+          "key_elements": [
+            {
+              "element": "Pooled Inventory Pattern",
+              "type": "pattern",
+              "location": "specs/001-b2b-hotel-platform/architecture-patterns.md",
+              "description": "Single source of truth + push sync to channels"
+            }
+          ],
+          "security_sensitivity": "internal",
+          "contains_secrets": false,
+          "reliability": "research",
+          "confidence": 0.8
+        },
+        {
+          "path": "specs/001-b2b-hotel-platform/stack-decision.md",
+          "purpose": ["Stack tecnológico con justificación por capa y versiones concretas"],
+          "why_relevant": ["Decisión final de stack que todos los agentes deben seguir"],
+          "key_elements": [
+            {
+              "element": "Stack Summary Table",
+              "type": "table",
+              "location": "specs/001-b2b-hotel-platform/stack-decision.md",
+              "description": "Capa → Tecnología → Versión → Justificación"
+            }
+          ],
+          "security_sensitivity": "internal",
+          "contains_secrets": false,
+          "reliability": "decision",
+          "confidence": 0.9
+        },
+        {
+          "path": "specs/001-b2b-hotel-platform/data-model.md",
+          "purpose": ["Modelo de datos completo con entidades, relaciones, DDL PostgreSQL"],
+          "why_relevant": ["Esquema de base de datos que toda implementación debe seguir"],
+          "key_elements": [
+            {
+              "element": "DDL SQL",
+              "type": "sql",
+              "location": "specs/001-b2b-hotel-platform/data-model.md",
+              "description": "CREATE TABLE statements para todas las entidades core"
+            }
+          ],
+          "security_sensitivity": "internal",
+          "contains_secrets": false,
+          "reliability": "design",
+          "confidence": 0.9
+        },
+        {
+          "path": "specs/001-b2b-hotel-platform/architecture.md",
+          "purpose": ["Arquitectura de alto nivel: diagramas, bounded contexts, flujos de datos, seguridad, deployment"],
+          "why_relevant": ["Blueprint arquitectónico para implementación"],
+          "key_elements": [
+            {
+              "element": "System Architecture Diagram",
+              "type": "diagram",
+              "location": "specs/001-b2b-hotel-platform/architecture.md",
+              "description": "Diagrama ASCII con todos los componentes y sus relaciones"
+            }
+          ],
+          "security_sensitivity": "internal",
+          "contains_secrets": false,
+          "reliability": "design",
+          "confidence": 0.9
+        },
+        {
+          "path": "specs/001-b2b-hotel-platform/spec.md",
+          "purpose": ["Especificación funcional: user stories, acceptance criteria, MoSCoW prioritization"],
+          "why_relevant": ["Define QUÉ construir y criterios de aceptación"],
+          "key_elements": [
+            {
+              "element": "User Stories",
+              "type": "section",
+              "location": "specs/001-b2b-hotel-platform/spec.md",
+              "description": "20+ user stories con acceptance criteria medible"
+            }
+          ],
+          "security_sensitivity": "internal",
+          "contains_secrets": false,
+          "reliability": "specification",
+          "confidence": 0.9
+        },
+        {
+          "path": "specs/001-b2b-hotel-platform/plan.md",
+          "purpose": ["Plan técnico maestro: roadmap, fases, milestones, equipo, presupuesto, integraciones"],
+          "why_relevant": ["Define CÓMO y CUÁNDO construir, con recursos necesarios"],
+          "key_elements": [
+            {
+              "element": "Roadmap",
+              "type": "section",
+              "location": "specs/001-b2b-hotel-platform/plan.md",
+              "description": "4 fases, 14 milestones, 24 meses"
+            }
+          ],
+          "security_sensitivity": "internal",
+          "contains_secrets": false,
+          "reliability": "planning",
+          "confidence": 0.8
+        }
+      ],
+      "patterns_found": [
+        {
+          "name": "Transactional Outbox Pattern",
+          "category": "Data Consistency",
+          "confidence": 0.9,
+          "source": "codebase_analysis",
+          "example_location": ["specs/001-b2b-hotel-platform/architecture-patterns.md"]
+        },
+        {
+          "name": "Optimistic Locking with Version Column",
+          "category": "Concurrency",
+          "confidence": 0.9,
+          "source": "codebase_analysis",
+          "example_location": ["specs/001-b2b-hotel-platform/architecture-patterns.md"]
+        },
+        {
+          "name": "CQRS Lite (Read/Write Separation)",
+          "category": "Performance",
+          "confidence": 0.9,
+          "source": "codebase_analysis",
+          "example_location": ["specs/001-b2b-hotel-platform/architecture-patterns.md"]
+        },
+        {
+          "name": "Adapter Pattern for OTA Integrations",
+          "category": "Integration",
+          "confidence": 0.9,
+          "source": "codebase_analysis",
+          "example_location": ["specs/001-b2b-hotel-platform/architecture.md"]
+        },
+        {
+          "name": "Saga Pattern for Distributed Transactions",
+          "category": "Reliability",
+          "confidence": 0.8,
+          "source": "codebase_analysis",
+          "example_location": ["specs/001-b2b-hotel-platform/architecture-patterns.md"]
+        },
+        {
+          "name": "Circuit Breaker Pattern",
+          "category": "Resilience",
+          "confidence": 0.8,
+          "source": "codebase_analysis",
+          "example_location": ["specs/001-b2b-hotel-platform/architecture-patterns.md"]
+        },
+        {
+          "name": "Database-per-Tenant Multi-tenancy",
+          "category": "Architecture",
+          "confidence": 0.9,
+          "source": "codebase_analysis",
+          "example_location": ["specs/001-b2b-hotel-platform/architecture.md"]
+        }
+      ],
+      "dependencies": {
+        "internal": [
+          "Availability Service → Rate Service (availability afecta pricing)",
+          "Booking Service → Availability Service (reserva consume inventario)",
+          "Booking Service → Channel Sync Service (reserva debe sincronizarse a OTAs)",
+          "Channel Sync Service → Availability Service (OTA push actualiza inventario pooled)",
+          "Promotion Engine → Rate Service (promos modifican tarifas finales)",
+          "Analytics Service → PostgreSQL (reads métricas vía TimescaleDB continuous aggregates)",
+          "Auth Service → todos los servicios (tenant context propagation)"
+        ],
+        "external": [
+          "Booking.com API (OTA XML + REST) — requiere partner program y certificación",
+          "Expedia API (REST/OTA XML) — requiere Connectivity Partner Program",
+          "Despegar API (REST) — principal OTA LATAM",
+          "Airbnb API (REST) — requiere Airbnb Connectivity Program",
+          "Cloudbeds PMS API (REST) — documentación pública",
+          "Mews PMS API (REST) — Open API specification",
+          "Stripe API (REST) — pagos internacionales + suscripciones",
+          "MercadoPago API (REST) — pagos LATAM (MXN, COP)",
+          "Keycloak (OAuth2/OIDC) — self-hosted identity provider",
+          "AWS (EKS, RDS, ElastiCache, MSK, CloudFront, S3, Route 53)"
+        ]
+      },
+      "gotchas": [
+        {
+          "text": "Los procesos de certificación OTA (Booking.com, Expedia) pueden tomar 3-6 meses y requieren completitud funcional del channel manager. Iniciar el application process desde el día 1.",
+          "confidence": 0.9
+        },
+        {
+          "text": "Las OTAs imponen rate limits estrictos (ej: Booking.com ~500 req/min). El Channel Sync Service debe implementar throttling adaptativo y colas de reintento.",
+          "confidence": 0.8
+        },
+        {
+          "text": "Los timezones de hoteles son críticos: una reserva a las 23:59 en Cancún (UTC-5) es del mismo día, pero en UTC puede ser del día siguiente. Toda fecha de inventario debe ser 'hotel local date', no UTC.",
+          "confidence": 0.9
+        },
+        {
+          "text": "La paridad de tarifas (rate parity) es ilegal en algunos países. Aunque MX/CO no la han prohibido aún, el feature de rate parity detection debe ser opcional/configurable por hotel.",
+          "confidence": 0.7
+        },
+        {
+          "text": "Los hoteles pequeños en LATAM a menudo no tienen PMS digital; usan Excel/Google Sheets. La plataforma debe ofrecer un 'PMS Lite' o importación CSV como fallback para estos hoteles.",
+          "confidence": 0.8
+        },
+        {
+          "text": "El pricing dinámico requiere datos históricos (al menos 6-12 meses) para ser efectivo. En el MVP, el pricing será semi-manual (reglas configuradas por el hotelero) y el ML se introduce en Fase 3 con datos acumulados.",
+          "confidence": 0.9
+        },
+        {
+          "text": "MercadoPago tiene restricciones para negocios B2B en algunos países. Verificar que el modelo SaaS (suscripción + comisión) es soportado sin requerir entidad legal local en cada país.",
+          "confidence": 0.6
+        }
+      ],
+      "domain_context": {
+        "security_considerations": [
+          {
+            "area": "Multi-tenancy isolation",
+            "location": "Database + API Gateway",
+            "concern": "Un hotel no debe poder acceder a datos de otro hotel. Database-per-tenant + row-level security + API Gateway tenant enforcement."
+          },
+          {
+            "area": "Payment data",
+            "location": "Payment Gateway integration",
+            "concern": "No almacenar datos de tarjetas de crédito. Usar tokenización del payment gateway (Stripe Elements, MercadoPago Checkout). PCI DSS compliance delegada al gateway."
+          },
+          {
+            "area": "API Keys",
+            "location": "Auth Service",
+            "concern": "API Keys para integraciones externas deben ser rotables, auditables, y tener permisos granulares (solo lectura de disponibilidad vs escritura de reservas)."
+          },
+          {
+            "area": "Competitive data",
+            "location": "Analytics Service",
+            "concern": "Competitive benchmarking debe ser estrictamente anonymizado. Mínimo 5 hoteles por cohorte. No permitir drill-down que identifique hoteles individuales."
+          }
+        ],
+        "testing_patterns": {
+          "framework": "Jest + Supertest (backend), React Testing Library + Playwright (frontend)",
+          "coverage_areas": [
+            "Unit tests: services, helpers, validation",
+            "Integration tests: API endpoints + database",
+            "Contract tests: OTA/PMS API mocks (Pact o similar)",
+            "E2E tests: flujos críticos (booking, availability sync)",
+            "Chaos testing: network partitions, latency injection, OTA failures",
+            "Load testing: <100ms p99 para availability queries con k6 o Artillery"
+          ],
+          "test_organization": "Colocated con source (__tests__/) + e2e en /tests/e2e/",
+          "mock_patterns": [
+            "OTA API mocks con respuestas grabadas (VCR pattern) para tests determinísticos",
+            "Kafka test container para integration tests de eventos",
+            "Redis test container para cache tests"
+          ]
+        },
+        "error_handling": "Result pattern (never throw in service layer): { success, data, error }. Saga compensation en booking service. Circuit breaker para OTA calls. DLQ para eventos fallidos. Alertas Sentry para errores 5xx.",
+        "data_flow": "Hotel actualiza inventario → PostgreSQL (outbox table) → Kafka (inventory.changed) → Channel Sync consume → push ARI a cada OTA → OTA webhook de reserva → Booking Service → validación + PostgreSQL + Kafka (booking.confirmed) → todas las OTAs notificadas de nuevo inventario"
+      },
+      "open_questions": [
+        {
+          "question": "¿Cuál es el estado actual de las regulaciones de rate parity en México y Colombia?",
+          "context": "Algunos países han prohibido cláusulas de rate parity. Verificar si MX/CO tienen restricciones que afecten la funcionalidad de rate parity detection.",
+          "type": "decision_blocker",
+          "affects": ["HOTEL-RESEARCH-DOMAIN", "HOTEL-SPEC"]
+        },
+        {
+          "question": "¿Qué PMS locales dominan el mercado hotelero independiente en México y Colombia?",
+          "context": "Integración PMS es crítica para MVP. PMS cloud tienen APIs documentadas, pero hoteles pequeños pueden usar sistemas legacy sin API.",
+          "type": "decision_blocker",
+          "affects": ["HOTEL-RESEARCH-DOMAIN", "HOTEL-DATA-MODEL"]
+        },
+        {
+          "question": "¿AWS Local Zones están disponibles en CDMX/Cancún y Bogotá/Cartagena para edge computing?",
+          "context": "El SLA de <100ms requiere latencia ultra-baja. Verificar opciones de edge computing en zonas turísticas objetivo.",
+          "type": "decision_blocker",
+          "affects": ["HOTEL-ARCH-DESIGN", "HOTEL-STACK"]
+        },
+        {
+          "question": "¿Qué gateway de pago tiene mejor cobertura y menores comisiones para B2B transfronterizo LATAM?",
+          "context": "La plataforma cobrará a hoteles (B2B). Se necesita soporte para MXN, COP, USD con suscripciones recurrentes.",
+          "type": "decision_blocker",
+          "affects": ["HOTEL-STACK", "HOTEL-SPEC"]
+        }
+      ]
+    },
+    "prior_decisions": [
+      {
+        "decision": "Backend: Node.js + TypeScript + NestJS (no Go, no Python, no Java)",
+        "rationale": [
+          "Mejor pool de talento en LATAM para Node.js/TypeScript vs Go o Rust",
+          "NestJS provee patrones enterprise (DI, modules, guards, interceptors) que benefician un proyecto multi-modulo que evolucionará a microservicios",
+          "Ecosistema maduro para integraciones REST/OAuth2/OpenAPI/WebSockets",
+          "TypeScript da type safety comparable a lenguajes compilados, crucial para dominio financiero (pricing, bookings)",
+          "Menor verbosidad que Java/Spring, permitiendo iteración más rápida en startup"
+        ],
+        "evidence": ["specs/001-b2b-hotel-platform/stack-decision.md"],
+        "confidence": 0.9,
+        "linked_constraints": ["Node.js 22 LTS", "TypeScript 5.5+ strict mode"],
+        "linked_patterns": ["Modular Monolith", "Bounded Contexts"]
+      },
+      {
+        "decision": "Frontend: React 19 + Next.js 15 App Router + Tailwind CSS 4",
+        "rationale": [
+          "Ecosistema masivo con bibliotecas de componentes enterprise (shadcn/ui, Radix)",
+          "React Server Components reducen JS en cliente para dashboards data-heavy",
+          "SSR beneficia performance inicial de carga de dashboards",
+          "Tailwind asegura consistencia visual sin CSS-in-JS overhead",
+          "Mayor pool de talento React en LATAM vs Vue o Angular"
+        ],
+        "evidence": ["specs/001-b2b-hotel-platform/stack-decision.md"],
+        "confidence": 0.9,
+        "linked_constraints": ["Next.js 15 App Router (no Pages Router)"],
+        "linked_patterns": []
+      },
+      {
+        "decision": "Database: PostgreSQL 16 + TimescaleDB 2.x + Redis 7 + Elasticsearch 8",
+        "rationale": [
+          "PostgreSQL: ACID indispensable para bookings, SERIALIZABLE isolation evita race conditions de overbooking",
+          "TimescaleDB: hypertables y continuous aggregates nativas para métricas de ocupación/ADR/RevPAR, mejor que manejar particionamiento manual en PostgreSQL vanilla",
+          "Redis: latencia sub-millisegundo, imprescindible para el SLA de <100ms en consultas de disponibilidad",
+          "Elasticsearch: búsqueda textual y facetada para hoteles, agregaciones para analítica exploratoria"
+        ],
+        "evidence": ["specs/001-b2b-hotel-platform/stack-decision.md", "specs/001-b2b-hotel-platform/data-model.md"],
+        "confidence": 0.9,
+        "linked_constraints": ["PostgreSQL SERIALIZABLE para Inventory/Rate tables"],
+        "linked_patterns": ["CQRS Lite", "Transactional Outbox"]
+      },
+      {
+        "decision": "Message Broker: Kafka para eventos de negocio + RabbitMQ para tareas asíncronas",
+        "rationale": [
+          "Kafka: log compacted topics mantienen snapshot de estado actual de inventario; ideal para event sourcing y sincronización de canales",
+          "RabbitMQ: mejor para tareas puntuales con DLQ (retry + dead letter para notificaciones OTA fallidas)",
+          "Separación de concerns: eventos de negocio (inmutable, replayable) vs tareas (transient, con retry)"
+        ],
+        "evidence": ["specs/001-b2b-hotel-platform/stack-decision.md", "specs/001-b2b-hotel-platform/architecture.md"],
+        "confidence": 0.8,
+        "linked_constraints": ["Kafka para eventos de inventario/reservas", "RabbitMQ para tareas asíncronas con DLQ"],
+        "linked_patterns": ["Event-Driven Architecture", "Transactional Outbox"]
+      },
+      {
+        "decision": "Arquitectura: Modular Monolith (Fase 1-2) → Microservicios (Fase 3+)",
+        "rationale": [
+          "Para MVP con 50-200 hoteles, un monolith bien modularizado con bounded contexts y schemas PostgreSQL separados es suficiente y más rápido de construir",
+          "La evolución a microservicios se dispara cuando: >500 hoteles, >100 req/s sostenidos, necesidad de escalar servicios independientemente",
+          "Los bounded contexts y eventos Kafka desde el inicio facilitan la extracción a microservicios sin reescribir lógica de negocio"
+        ],
+        "evidence": ["specs/001-b2b-hotel-platform/architecture.md"],
+        "confidence": 0.9,
+        "linked_constraints": ["Bounded contexts con schemas PostgreSQL separados desde día 1"],
+        "linked_patterns": ["Modular Monolith", "Domain-Driven Design", "Strangler Fig Pattern (para migración futura)"]
+      },
+      {
+        "decision": "Multi-tenancy: database-per-tenant desde el inicio",
+        "rationale": [
+          "Máximo isolation entre hoteles (requisito de seguridad y compliance)",
+          "Facilita backups individuales, restores, y migraciones por hotel",
+          "Escala horizontalmente (diferentes hoteles en diferentes instancias RDS si es necesario)",
+          "Costo adicional de PgBouncer connection pooling es aceptable vs riesgo de data leak con row-level security solamente"
+        ],
+        "evidence": ["specs/001-b2b-hotel-platform/architecture.md"],
+        "confidence": 0.9,
+        "linked_constraints": ["PgBouncer para connection pooling", "Migrations versionadas por tenant"],
+        "linked_patterns": ["Database-per-Tenant"]
+      },
+      {
+        "decision": "Cloud: AWS (no GCP, no Azure) — región primaria us-east-1",
+        "rationale": [
+          "Mayor presencia en LATAM: Local Zones en CDMX/Querétaro planeadas, Edge Locations en Bogotá",
+          "Servicios managed maduros: RDS Aurora, ElastiCache, MSK (Kafka), OpenSearch (Elasticsearch), EKS",
+          "SaaS ecosystem: Terraform modules, Helm charts, documentación abundante",
+          "us-east-1 (N. Virginia): ~50ms latencia desde CDMX, costo más bajo que sa-east-1"
+        ],
+        "evidence": ["specs/001-b2b-hotel-platform/infrastructure-research.md"],
+        "confidence": 0.8,
+        "linked_constraints": ["EKS 1.31+", "Terraform para IaC"],
+        "linked_patterns": ["GitOps con ArgoCD"]
+      }
+    ],
+    "reuse_notes": [
+      {
+        "path": "specs/001-b2b-hotel-platform/stack-decision.md",
+        "trust": "high"
+      },
+      {
+        "path": "specs/001-b2b-hotel-platform/architecture.md",
+        "trust": "high"
+      },
+      {
+        "path": "specs/001-b2b-hotel-platform/data-model.md",
+        "trust": "high"
+      },
+      {
+        "path": "specs/001-b2b-hotel-platform/spec.md",
+        "trust": "high"
+      },
+      {
+        "path": "specs/001-b2b-hotel-platform/plan.md",
+        "trust": "high"
+      }
+    ]
+  }
+}

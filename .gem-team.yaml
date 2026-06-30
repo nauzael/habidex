@@ -1,0 +1,87 @@
+# .gem-team.yaml
+version: 1
+
+# Orquestación
+orchestrator:
+  default_complexity_threshold: LOW
+  max_concurrent_agents: 2
+
+# Integración con Spec Kit
+spec_kit:
+  enabled: true
+  detect: ".specify/"
+
+# Mapeo de fases gem-team ↔ artifacts Spec Kit
+phases:
+  phase_0:
+    context_sources:
+      - ".specify/memory/constitution.md"
+      - "specs/*/spec.md"
+      - "specs/*/data-model.md"
+    context_envelope: "context_envelope.json"
+
+  phase_1:
+    route: "specify"
+
+  phase_2:
+    plan_sources:
+      - "specs/*/plan.md"
+      - "specs/*/research.md"
+    agent: "gem-planner"
+    task_generation:
+      source: "specs/*/tasks.md"
+
+  phase_3:
+    task_sources:
+      - "specs/*/tasks.md"
+    agents:
+      implement: "gem-implementer"
+      review: "gem-reviewer"
+      test: "gem-browser-tester"
+      research: "gem-researcher"
+      docs: "gem-documentation-writer"
+    gates:
+      converge: "speckit.converge"
+      analyze: "speckit.analyze"
+
+  phase_4:
+    output: "context_envelope.json"
+    artifact_report: true
+
+# Mapeo de rutas de artifacts Spec Kit
+artifact_routes:
+  constitution: ".specify/memory/constitution.md"
+  spec: "specs/<feature>/spec.md"
+  plan: "specs/<feature>/plan.md"
+  tasks: "specs/<feature>/tasks.md"
+  contracts: "specs/<feature>/contracts/"
+  data_model: "specs/<feature>/data-model.md"
+  research: "specs/<feature>/research.md"
+  quickstart: "specs/<feature>/quickstart.md"
+  context_envelope: "context_envelope.json"
+
+# Contexto compartido entre fases
+context_envelope:
+  schema: ".specify/scripts/powershell/context_envelope.schema.json"
+  auto_update: true
+  bridge_script: ".specify/scripts/powershell/update-context-bridge.ps1"
+
+# Memoria y alcance
+memory:
+  scope: ["constitution", "prior_decisions", "patterns", "gotchas"]
+  sources:
+    - ".specify/memory/constitution.md"
+    - "docs/plan/*/context_envelope.json"
+
+# Mapeo de agentes speckit
+agents:
+  speckit-constitution: "gem-researcher"
+  speckit-specify: "gem-researcher"
+  speckit-clarify: "gem-researcher"
+  speckit-plan: "gem-planner"
+  speckit-tasks: "gem-planner"
+  speckit-implement: "gem-implementer"
+  speckit-converge: "gem-reviewer"
+  speckit-analyze: "gem-reviewer"
+  speckit-checklist: "gem-reviewer"
+  speckit-taskstoissues: "gem-documentation-writer"

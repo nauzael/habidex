@@ -1,0 +1,352 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://specify.speckit.dev/schemas/context_envelope.schema.json",
+  "title": "Context Envelope Schema",
+  "description": "Schema de validación para context_envelope.json — bridge entre Spec Kit artifacts y gem-team agents",
+  "type": "object",
+  "required": [
+    "meta",
+    "scope",
+    "tech_stack",
+    "conventions",
+    "constraints",
+    "architecture_snapshot",
+    "research_digest"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "description": "Metadatos del envelope: identificación, versión y fuentes",
+      "required": ["plan_id", "created_at", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "plan_id": {
+          "type": "string",
+          "description": "Identificador único del plan (plan_id del plan.yaml, o auto-generado)"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp ISO-8601 de creación"
+        },
+        "last_updated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp ISO-8601 de última actualización"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Versión del envelope (incrementa en cada actualización)"
+        },
+        "source": {
+          "type": "array",
+          "description": "Artifacts Spec Kit que alimentaron este envelope",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "description": "Alcance del proyecto: propósito, aplicabilidad y no-metas",
+      "required": ["purpose"],
+      "additionalProperties": true,
+      "properties": {
+        "purpose": {
+          "type": "array",
+          "description": "Propósitos/objetivos del proyecto extraídos de spec.md y constitution.md",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "applies_to": {
+          "type": "array",
+          "description": "Ámbitos de aplicación (equipos, sistemas, fases)",
+          "items": { "type": "string" }
+        },
+        "non_goals": {
+          "type": "array",
+          "description": "Lo que está fuera del alcance explícitamente",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "tech_stack": {
+      "type": "array",
+      "description": "Tecnologías detectadas desde plan.md y spec.md",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre de la tecnología (ej: React, Node.js, PostgreSQL)"
+          },
+          "version": {
+            "type": "string",
+            "description": "Versión detectada (opcional)"
+          },
+          "usage_context": {
+            "type": "string",
+            "description": "Contexto de uso (ej: frontend UI, base de datos principal)"
+          },
+          "config_files": {
+            "type": "array",
+            "description": "Archivos de configuración asociados",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "conventions": {
+      "type": "array",
+      "description": "Reglas y convenciones extraídas de constitution.md y governance",
+      "items": { "type": "string" }
+    },
+    "constraints": {
+      "type": "object",
+      "description": "Restricciones del proyecto clasificadas por severidad",
+      "additionalProperties": true,
+      "properties": {
+        "hard": {
+          "type": "array",
+          "description": "Restricciones obligatorias (must, required, non-negotiable)",
+          "items": { "type": "string" }
+        },
+        "soft": {
+          "type": "array",
+          "description": "Restricciones recomendadas (should, preferencias)",
+          "items": { "type": "string" }
+        },
+        "compatibility": {
+          "type": "array",
+          "description": "Requerimientos de compatibilidad (browsers, plataformas, versiones)",
+          "items": { "type": "string" }
+        },
+        "security_requirements": {
+          "type": "array",
+          "description": "Requerimientos de seguridad explícitos",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "architecture_snapshot": {
+      "type": "object",
+      "description": "Instantánea de la arquitectura del proyecto",
+      "additionalProperties": true,
+      "properties": {
+        "key_dirs": {
+          "type": "object",
+          "description": "Directorios clave del proyecto con metadatos",
+          "additionalProperties": true
+        },
+        "patterns": {
+          "type": "array",
+          "description": "Patrones arquitectónicos detectados (MVC, MVP, clean architecture, etc.)",
+          "items": { "type": "string" }
+        },
+        "key_components": {
+          "type": "array",
+          "description": "Componentes clave del sistema con ubicación y responsabilidad",
+          "items": {
+            "type": "object",
+            "required": ["name", "responsibility"],
+            "additionalProperties": true,
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Nombre del componente"
+              },
+              "location": {
+                "type": "string",
+                "description": "Ruta al archivo/directorio del componente"
+              },
+              "responsibility": {
+                "type": "array",
+                "description": "Responsabilidades del componente",
+                "items": { "type": "string" }
+              },
+              "confidence": {
+                "type": "number",
+                "description": "Nivel de confianza en la precisión del análisis",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "research_digest": {
+      "type": "object",
+      "description": "Resumen de investigación: archivos relevantes, patrones, riesgos",
+      "additionalProperties": true,
+      "properties": {
+        "relevant_files": {
+          "type": "array",
+          "description": "Archivos relevantes referenciados en los artifacts",
+          "items": {
+            "type": "object",
+            "required": ["path"],
+            "additionalProperties": true,
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "Ruta del archivo relativa al proyecto"
+              },
+              "purpose": {
+                "type": "array",
+                "description": "Propósito del archivo",
+                "items": { "type": "string" }
+              },
+              "key_elements": {
+                "type": "array",
+                "description": "Elementos clave extraídos del archivo",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "element": { "type": "string" },
+                    "type": { "type": "string", "enum": ["function", "class", "variable", "pattern", "interface", "type"] },
+                    "location": { "type": "string" },
+                    "description": { "type": "string" }
+                  }
+                }
+              },
+              "security_sensitivity": {
+                "type": "string",
+                "enum": ["none", "internal", "confidential", "secret"],
+                "description": "Nivel de sensibilidad de seguridad"
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        },
+        "patterns_found": {
+          "type": "array",
+          "description": "Patrones descubiertos en el código/documentación",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "category": { "type": "string" },
+              "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+              "source": { "type": "string", "enum": ["codebase_analysis", "doc", "assumption"] },
+              "example_location": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "dependencies": {
+          "type": "object",
+          "description": "Dependencias internas y externas del proyecto",
+          "properties": {
+            "internal": {
+              "type": "array",
+              "description": "Dependencias internas (módulos, componentes del proyecto)",
+              "items": { "type": "string" }
+            },
+            "external": {
+              "type": "array",
+              "description": "Dependencias externas (librerías, APIs, servicios)",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "gotchas": {
+          "type": "array",
+          "description": "Riesgos, problemas conocidos y advertencias",
+          "items": {
+            "type": "object",
+            "required": ["text"],
+            "properties": {
+              "text": { "type": "string", "description": "Descripción del riesgo/issue" },
+              "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        },
+        "domain_context": {
+          "type": "array",
+          "description": "Contexto de dominio específico del negocio",
+          "items": { "type": "object" }
+        },
+        "open_questions": {
+          "type": "array",
+          "description": "Preguntas abiertas y decisiones pendientes",
+          "items": {
+            "type": "object",
+            "required": ["question"],
+            "properties": {
+              "question": { "type": "string" },
+              "context": { "type": "string" },
+              "type": { "type": "string", "enum": ["decision_blocker", "research", "nice_to_know"] },
+              "affects": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "prior_decisions": {
+      "type": "array",
+      "description": "Decisiones previas registradas (opcional)",
+      "items": {
+        "type": "object",
+        "required": ["decision", "rationale", "confidence"],
+        "additionalProperties": true,
+        "properties": {
+          "decision": {
+            "type": "string",
+            "description": "Descripción de la decisión tomada"
+          },
+          "rationale": {
+            "type": "array",
+            "description": "Razonamiento que justifica la decisión",
+            "items": { "type": "string" }
+          },
+          "evidence": {
+            "type": "array",
+            "description": "Rutas de evidencia que respaldan la decisión",
+            "items": { "type": "string" }
+          },
+          "confidence": {
+            "type": "number",
+            "description": "Nivel de confianza (0.0-1.0)",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "linked_constraints": {
+            "type": "array",
+            "description": "Restricciones vinculadas",
+            "items": { "type": "string" }
+          },
+          "linked_patterns": {
+            "type": "array",
+            "description": "Patrones vinculados",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "reuse_notes": {
+      "type": "array",
+      "description": "Notas de reutilización para futuros agentes (opcional)",
+      "items": {
+        "type": "object",
+        "required": ["path", "trust"],
+        "properties": {
+          "path": { "type": "string" },
+          "trust": { "type": "string", "enum": ["high", "low"] }
+        }
+      }
+    }
+  }
+}

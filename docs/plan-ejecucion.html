@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Plataforma Hotelera — Propuesta para Socios</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    font-size:17px;line-height:1.7;color:#1C1C2E;background:#F7F4F0
+  }
+  :root{
+    --primary:#1E2E4A;--primary-light:#2E4A7A;
+    --secondary:#D47A5A;--accent:#5A8C6F;
+    --bg:#F7F4F0;--card:#ffffff;--text-light:#6B6B80;--border:#E5E0D8;
+    --radius:16px;--shadow:0 2px 16px rgba(0,0,0,0.07);--danger:#C95A5A
+  }
+  .container{max-width:520px;margin:0 auto;padding:0 20px}
+  section{padding:24px 0}
+
+  /* Hero */
+  .hero{
+    background:linear-gradient(135deg,#1E2E4A 0%,#2E4A7A 50%,#4A6B9A 100%);
+    color:white;padding:40px 0 32px;text-align:center;border-radius:0 0 36px 36px
+  }
+  .hero h1{color:white;font-size:1.8rem;font-weight:800;letter-spacing:-0.02em}
+  .hero .subtitle{color:rgba(255,255,255,0.85);font-size:1rem;margin-top:4px}
+  .hero .region{font-size:0.85rem;color:rgba(255,255,255,0.7);margin-top:12px;background:rgba(255,255,255,0.15);display:inline-block;padding:4px 16px;border-radius:20px}
+
+  /* Currency note */
+  .currency-note{
+    background:#FDF0EA;border-radius:12px;padding:14px 16px;margin-bottom:4px;
+    text-align:center;font-size:0.95rem;font-weight:600;color:#C46A4A;
+    border:1px solid #E8C8B8
+  }
+
+  /* Cards */
+  .card{
+    background:var(--card);border-radius:var(--radius);padding:20px;
+    box-shadow:var(--shadow);margin-bottom:16px;border:1px solid var(--border)
+  }
+  .card-highlight{border-left:5px solid var(--secondary)}
+  .card-success{border-left:5px solid var(--accent)}
+  .card-info{border-left:5px solid var(--primary)}
+
+  h2{
+    font-size:1.5rem;font-weight:800;color:var(--primary);
+    margin-bottom:16px;letter-spacing:-0.01em;text-align:center
+  }
+  h3{font-size:1.15rem;font-weight:700;margin-bottom:10px;color:var(--text)}
+  p{font-size:0.95rem;margin-bottom:12px;color:var(--text-light)}
+  .big-price{font-size:2rem;font-weight:800;color:var(--primary);line-height:1.1}
+  .big-price small{font-size:0.8rem;font-weight:400;color:var(--text-light);display:block}
+
+  /* Stats row */
+  .stats{display:flex;gap:12px;margin-bottom:16px}
+  .stat{
+    flex:1;background:var(--card);border-radius:12px;padding:14px 8px;
+    text-align:center;box-shadow:var(--shadow);border:1px solid var(--border)
+  }
+  .stat .num{font-size:1.5rem;font-weight:800;color:var(--primary)}
+  .stat .lbl{font-size:0.7rem;color:var(--text-light);margin-top:2px}
+
+  /* Planes */
+  .planes{display:flex;flex-direction:column;gap:8px;margin:16px 0}
+  .plan{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 18px;background:var(--card);border-radius:12px;
+    border:1px solid var(--border);box-shadow:var(--shadow)
+  }
+  .plan .info{flex:1}
+  .plan .name{font-weight:700;font-size:1rem}
+  .plan .desc{font-size:0.78rem;color:var(--text-light);margin-top:1px}
+  .plan .precio{font-weight:800;color:var(--primary);font-size:1.1rem;text-align:right}
+  .plan .precio small{font-weight:400;color:var(--text-light);font-size:0.75rem;display:block}
+  .plan.destacado{border-color:var(--secondary);border-width:2px;background:#fffaf5}
+  .plan.gratis{background:#f0f7ff;border-color:#b8d4f0}
+  .plan.gratis .precio{color:var(--accent)}
+  .plan.founders{background:linear-gradient(135deg,#fff8e1,#fff3cd);border-color:#f0c840;border-width:2px;margin-bottom:4px}
+  .plan.founders .precio{color:#b8860b}
+  .plan.founders .founders-badge{font-size:0.65rem;background:#b8860b;color:white;display:inline-block;padding:2px 10px;border-radius:20px;font-weight:700}
+
+  /* Chips */
+  .chip{
+    display:inline-block;padding:3px 10px;border-radius:20px;
+    font-size:0.7rem;font-weight:600;margin:2px
+  }
+  .chip-tech{background:#E8E4F0;color:#2E4A7A}
+  .chip-pay{background:#FDF0EA;color:#D47A5A}
+  .chip-free{background:#e8f8e8;color:var(--accent)}
+
+  /* Glosario */
+  .glosario-item{
+    display:flex;gap:12px;align-items:flex-start;
+    padding:10px 0;border-bottom:1px solid #f0f0f0
+  }
+  .glosario-item:last-child{border-bottom:none}
+  .glosario-item .emoji{font-size:1.2rem;flex-shrink:0;margin-top:1px}
+  .glosario-item p{font-size:0.88rem;margin-bottom:0}
+  .glosario-item strong{color:var(--text)}
+  .glosario-item .explica{display:block;color:var(--primary);font-size:0.82rem;margin-top: 2px}
+
+  /* Check items */
+  .check{
+    display:flex;gap:12px;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:0.9rem;color:var(--text-light)
+  }
+  .check:last-child{border-bottom:none}
+  .check .ico{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+  .check strong{color:var(--text)}
+
+  /* Timeline */
+  .tl{position:relative;padding-left:28px;margin:16px 0}
+  .tl::before{content:'';position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:#d0d8e0}
+  .tl-item{position:relative;margin-bottom:22px}
+  .tl-item::before{
+    content:'';position:absolute;left:-24px;top:4px;
+    width:12px;height:12px;border-radius:50%;
+    background:var(--primary);border:3px solid white;box-shadow:0 0 0 2px var(--primary)
+  }
+  .tl-item .fase{font-weight:700;color:var(--primary);font-size:0.9rem}
+  .tl-item .cuando{font-size:0.78rem;color:var(--text-light);margin-bottom:4px}
+  .tl-item p{font-size:0.88rem;margin-bottom:0}
+
+  /* Upgrade */
+  .upgrade-step{
+    display:flex;align-items:center;gap:14px;
+    padding:12px 16px;background:var(--card);border-radius:12px;
+    border:1px solid var(--border);margin-bottom:6px;font-size:0.9rem
+  }
+  .upgrade-step .num{font-size:1.2rem;flex-shrink:0;width:24px;text-align:center}
+  .upgrade-step p{margin-bottom:0}
+  .upgrade-step strong{color:var(--primary)}
+
+  /* FAQ style */
+  .faq-q{
+    font-weight:700;color:var(--text);font-size:0.92rem;
+    padding:10px 0 4px;border-top:1px solid #f0f0f0
+  }
+  .faq-q:first-child{border-top:none}
+  .faq-a{font-size:0.88rem;color:var(--text-light);padding-bottom:6px}
+
+  /* CTA */
+  .cta{
+    background:linear-gradient(135deg,#1E2E4A 0%,#2E4A7A 100%);
+    color:white;border-radius:var(--radius);padding:28px 20px;text-align:center;margin:20px 0
+  }
+  .cta h3{color:white;font-size:1.3rem}
+  .cta p{color:rgba(255,255,255,0.85);font-size:0.9rem}
+  .cta .file{font-size:0.78rem;color:rgba(255,255,255,0.5);margin-top:12px}
+
+  .footer{text-align:center;padding:32px 0 24px}
+  .footer p{font-size:0.78rem;color:var(--text-light);margin-bottom:2px}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="container">
+    <p style="font-size:2.8rem;margin-bottom:8px">🏝️</p>
+    <h1>Plataforma Hotelera<br>del Golfo de Morrosquillo</h1>
+    <p class="subtitle">Una plataforma que ayuda a los hoteles pequeños a no perder plata ni reservas</p>
+    <span class="region">📍 Tolú · Coveñas · Sincelejo · Sucre, Colombia</span>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- 💰 -->
+<div class="currency-note">
+  💰 Todos los precios están en <strong>pesos colombianos (COP)</strong>
+  <br><span style="font-size:0.82rem;font-weight:400;">Tasa de referencia: ~$4.100 pesos por 1 dólar</span>
+</div>
+
+<!-- ──────────────── QUÉ ES ──────────────── -->
+<section>
+  <h2>🤔 ¿Qué es esto?</h2>
+
+  <div class="card">
+    <p>Imagina un hotel pequeño en Tolú, de 20 habitaciones frente al mar. Don José, el dueño, tiene el hotel en <strong>Booking.com</strong>, en <strong>Despegar</strong>, y también recibe huéspedes que llegan directo.</p>
+    <p>Cada vez que alguien reserva, Don José tiene que:</p>
+    <p style="text-align:center;color:var(--text);font-size:1rem;padding:4px 0;">1. Apuntarlo en un cuaderno ✏️<br>2. Entrar a Booking.com a cerrar la fecha 📱<br>3. Entrar a Despegar a cerrar la fecha 📱<br>4. Revisar que no se le haya pasado nada 😰</p>
+    <p>En diciembre pasado (temporada alta), Don José tuvo <strong>overbooking</strong>: dos familias diferentes reservaron la misma habitación porque una no la había cerrado a tiempo en Despegar. Le tocó pagarles el hotel vecino. Perdió plata y quedó mal.</p>
+  </div>
+
+  <div class="card card-success" style="background:#f0faf0;">
+    <p style="font-size:1.05rem;font-weight:600;color:#1a7a1a;">✅ La plataforma resuelve esto:</p>
+    <p>Don José abre la <strong>aplicación en su celular</strong>, marca la habitación como ocupada <strong>una sola vez</strong>, y automáticamente la plataforma:</p>
+    <div class="check"><span class="ico">🔄</span><span>Actualiza Booking.com, Despegar y todos los canales</span></div>
+    <div class="check"><span class="ico">📲</span><span>Le manda un <strong>WhatsApp</strong>: "Nueva reserva: 2 hab para el 15 de diciembre"</span></div>
+    <div class="check"><span class="ico">⚡</span><span>Le avisa <strong>inmediatamente</strong> si hay posibilidad de overbooking</span></div>
+    <div class="check"><span class="ico">📊</span><span>Le muestra en una pantalla cuánto ha vendido este mes</span></div>
+  </div>
+</section>
+
+<!-- ──────────────── ¿Y QUÉ SON LOS "CANALES"? ──────────────── -->
+<section>
+  <h2>📡 ¿Qué son los "canales"?</h2>
+
+  <div class="card card-info">
+    <p>En el mundo hotelero, un <strong>"canal"</strong> es cada lugar donde se puede reservar una habitación. Piensa en ellos como las <strong>vitrinas</strong> donde el hotel muestra sus habitaciones:</p>
+
+    <div class="glosario-item">
+      <span class="emoji">🌐</span>
+      <p><strong>Booking.com</strong> — El más grande del mundo. Imperdible.<span class="explica">Todos los hoteles del Golfo están aquí</span></p>
+    </div>
+    <div class="glosario-item">
+      <span class="emoji">✈️</span>
+      <p><strong>Despegar</strong> — El más usado en Colombia.<span class="explica">Donde reservan los turistas nacionales</span></p>
+    </div>
+    <div class="glosario-item">
+      <span class="emoji">🏡</span>
+      <p><strong>Airbnb</strong> — Cada vez más popular en la Costa.<span class="explica">Sobre todo para cabañas y casas completas</span></p>
+    </div>
+    <div class="glosario-item">
+      <span class="emoji">🌍</span>
+      <p><strong>Web propia</strong> — La página web del hotel.<span class="explica">Sin comisiones, el hotelero gana más</span></p>
+    </div>
+    <div class="glosario-item">
+      <span class="emoji">📞</span>
+      <p><strong>Venta directa</strong> — Recepción, llamadas, WhatsApp.<span class="explica">Gestionada directamente desde la plataforma</span></p>
+    </div>
+
+    <p style="margin-top:12px;font-size:0.85rem;background:#f0f4ff;padding:10px 14px;border-radius:10px;">
+      💡 <strong>Más canales = más reservas</strong>, pero también más trabajo manual. La plataforma automatiza ese trabajo.
+    </p>
+  </div>
+</section>
+
+<!-- ──────────────── PLANES ──────────────── -->
+<section>
+  <h2>💰 Planes</h2>
+  <p style="text-align:center;font-size:0.9rem;">Suscripción mensual fija. Pagas lo mismo todo el año.</p>
+
+  <div class="planes">
+    <div class="plan founders" style="margin-bottom:12px;">
+      <div class="info">
+        <div class="name">👑 Founders <span class="founders-badge">EXCLUSIVO PILOTO</span></div>
+        <div class="desc">Funcionalidad COMPLETA · Todos los canales · Tiempo real · WhatsApp · Pricing · IA</div>
+        <div class="desc" style="font-size:0.7rem;margin-top:4px;color:#b8860b;">🔒 Solo para los primeros 10 hoteles beta en Tolú y Coveñas</div>
+      </div>
+      <div class="precio">Gratis <small>6 meses · después eligen plan</small></div>
+    </div>
+
+    <div class="plan gratis">
+      <div class="info">
+        <div class="name">Free</div>
+        <div class="desc">Hasta 5 habitaciones · 1 canal · WhatsApp incluído</div>
+      </div>
+      <div class="precio">$0 <small>gratis siempre</small></div>
+    </div>
+
+    <div class="plan destacado">
+      <div class="info">
+        <div class="name">Micro</div>
+        <div class="desc">Hasta 10 hab · 2 canales · WhatsApp incluido</div>
+      </div>
+      <div class="precio">$80.000 <small>/mes</small></div>
+    </div>
+
+    <div class="plan">
+      <div class="info">
+        <div class="name">Starter</div>
+        <div class="desc">Hasta 20 hab · 3 canales · Promociones</div>
+      </div>
+      <div class="precio">$160.000 <small>/mes</small></div>
+    </div>
+
+    <div class="plan">
+      <div class="info">
+        <div class="name">Growth</div>
+        <div class="desc">Hasta 50 hab · 5 canales · Precios automáticos</div>
+      </div>
+      <div class="precio">$400.000 <small>/mes</small></div>
+    </div>
+
+    <div class="plan">
+      <div class="info">
+        <div class="name">Pro</div>
+        <div class="desc">Hasta 150 hab · 10 canales · Inteligencia Artificial</div>
+      </div>
+      <div class="precio">$800.000 <small>/mes</small></div>
+    </div>
+
+    <div class="plan">
+      <div class="info">
+        <div class="name">Enterprise</div>
+        <div class="desc">Sin límites · Dedicado · Personalizado</div>
+      </div>
+      <div class="precio">$1.600.000+ <small>/mes</small></div>
+    </div>
+  </div>
+
+  <p style="text-align:center;font-size:0.78rem;color:#999;">($80.000 COP ≈ $19 USD · $400.000 ≈ $98 USD · $800.000 ≈ $195 USD)</p>
+
+  <div class="card card-highlight" style="background:#fffdf5;">
+    <p><strong>👑 ¿Y el tier Founders?</strong> Los primeros 10 hoteles que participen en la prueba piloto (Tolú y Coveñas) obtienen <strong>todo desbloqueado</strong> — canales ilimitados, sincronización en tiempo real, WhatsApp, precios automáticos, todo. Sin limitaciones. La idea es que vivan la experiencia completa y nos den feedback real.</p>
+    <p style="margin-bottom:0;font-size:0.85rem;">🔒 Es exclusivo para los beta testers. Después de 6 meses, eligen si se quedan en un plan pago con descuento vitalicio o vuelven al Free estándar.</p>
+  </div>
+
+  <div class="card card-success">
+    <p><strong>🆓 ¿El plan Free por qué es gratis?</strong> Es nuestra puerta de entrada para cualquier hotelero que quiera probar. Sin fecha de vencimiento, incluye WhatsApp, pero con limitaciones estratégicas (1 canal, sincroniza cada 30 min). Cuando el hotelero siente la necesidad de más canales o velocidad, él solito pide el upgrade. <strong>~40% migran a pago en el primer año</strong>.</p>
+  </div>
+</section>
+
+<!-- ──────────────── CÓMO FUNCIONA EL UPGRADE ──────────────── -->
+<section>
+  <h2>🧗 ¿Cómo pasa un hotel de Free a pagar?</h2>
+  <p>No lo forzamos. El hotelero mismo siente cuando necesita más:</p>
+
+  <div class="upgrade-step">
+    <span class="num">1️⃣</span>
+    <p>Empieza en <strong>Free</strong> — sincroniza cada 30 minutos, solo 1 canal, WhatsApp incluído</p>
+  </div>
+  <div class="upgrade-step" style="border-color:#f0d8a8;">
+    <span class="num" style="color:var(--accent);">↓</span>
+    <p>Llega diciembre (temporada alta) y el sync cada 30 min se queda corto → <strong>upgrade a Micro $80.000/mes</strong></p>
+  </div>
+  <div class="upgrade-step" style="border-color:#f0d8a8;">
+    <span class="num" style="color:var(--accent);">↓</span>
+    <p>El hotel crece, quiere estar en más canales → <strong>Starter $160.000</strong></p>
+  </div>
+  <div class="upgrade-step" style="border-color:#f0d8a8;">
+    <span class="num" style="color:var(--accent);">↓</span>
+    <p>Quiere que la plataforma le sugiera precios según la temporada → <strong>Growth $400.000</strong></p>
+  </div>
+  <div class="upgrade-step">
+    <span class="num">🏆</span>
+    <p>El hotelero ahora <strong>recomienda</strong> la plataforma a otros hoteleros de la playa</p>
+  </div>
+</section>
+
+<!-- ──────────────── QUÉ HACE LA PLATAFORMA ──────────────── -->
+<section>
+  <h2>📱 ¿Qué hace exactamente?</h2>
+
+  <div class="card card-highlight">
+    <div class="check"><span class="ico">🔄</span><span><strong>Sincroniza todo:</strong> Marca una habitación como ocupada y en segundos se actualiza en Booking, Despegar y los demás canales</span></div>
+    <div class="check"><span class="ico">💬</span><span><strong>Notifica por WhatsApp:</strong> "Nueva reserva · 2 habitaciones · Llegan el 15 de diciembre · $560.000 COP". Sin tener que revisar correo</span></div>
+    <div class="check"><span class="ico">📵</span><span><strong>Funciona sin internet:</strong> Si se va la luz o el internet en la playa, la app sigue funcionando. Cuando vuelve la conexión, sincroniza todo</span></div>
+    <div class="check"><span class="ico">📊</span><span><strong>Dashboard simple:</strong> En una pantalla el hotelero ve cuánto ha vendido, cuántas reservas tiene, y cómo le fue el año pasado</span></div>
+    <div class="check"><span class="ico">💰</span><span><strong>Sugiere precios:</strong> Le dice "en diciembre suba la tarifa a $250.000, en marzo bájela a $120.000" según la temporada</span></div>
+    <div class="check"><span class="ico">🛡️</span><span><strong>Cero overbookings:</strong> Nunca dos canales pueden vender la misma habitación. Se acabó el dolor de cabeza</span></div>
+  </div>
+</section>
+
+<!-- ──────────────── ¿CÓMO SE CONECTA A BOOKING? ──────────────── -->
+<section>
+  <h2>🔌 ¿Y cómo se conecta con Booking y Despegar?</h2>
+
+  <div class="card">
+    <p>Para que la plataforma pueda <strong>actualizar automáticamente</strong> las habitaciones en Booking y Despegar, necesita una certificación oficial de cada OTA. Eso toma de 3 a 6 meses.</p>
+    <p><strong>¿Mientras tanto?</strong> Tenemos un sistema puente que funciona desde el día 1:</p>
+  </div>
+
+  <div class="card card-highlight">
+    <div class="check"><span class="ico">💬</span><span>Cuando el hotelero marca una habitación como ocupada, la plataforma le envía un <strong>WhatsApp</strong>: "✅ Reservado. ¿Ya cerraste esta fecha en Booking? Responde ✅ cuando lo hagas"</span></div>
+    <div class="check"><span class="ico">📡</span><span>La plataforma <strong>consulta automáticamente</strong> si Booking aún muestra la habitación como disponible (usando la API oficial de Booking — <strong>sin violar términos, sin hacer trampa</strong>)</span></div>
+    <div class="check"><span class="ico">⏰</span><span>Si el hotelero no ha confirmado en 2 horas, recibe otro récordatorio. Y otro. Hasta que confirme</span></div>
+    <div class="check"><span class="ico">📋</span><span>Fin de semana: recibe un reporte: "Esta semana cumpliste el 85% de las actualizaciones a tiempo. El 15% te tomó en promedio 4 horas en actualizarse"</span></div>
+  </div>
+
+  <div class="card card-success" style="background:#f0faf0;">
+    <p style="font-size:0.85rem;margin-bottom:0;">⚠️ <strong>Importante:</strong> No usamos scraping ni automatizaciones prohibidas. Lo que hacemos es 100% legal y aprobado por Booking. Cuando llegue la certificación oficial, el reemplazo del flujo manual por el automático será <strong>invisible para el hotelero</strong>.</p>
+  </div>
+</section>
+
+<!-- ──────────────── ¿CUÁNTO SE NECESITA INVERTIR? ──────────────── -->
+<section>
+  <h2>📊 ¿Cuánto se necesita?</h2>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="num">$2.3M</div>
+      <div class="lbl">Inversión total (USD, 24 meses)</div>
+    </div>
+    <div class="stat">
+      <div class="num">Mes 26</div>
+      <div class="lbl">Recuperación (breakeven)</div>
+    </div>
+    <div class="stat">
+      <div class="num">70%</div>
+      <div class="lbl">Margen bruto Año 3</div>
+    </div>
+  </div>
+
+  <p style="text-align:center;font-size:0.78rem;color:#999;">(Las cifras de inversión están en dólares porque es el estándar del sector)</p>
+
+  <div class="card">
+    <p><strong>¿Cómo se gana plata?</strong></p>
+    <div class="check"><span class="ico">🏷️</span><span><strong>Suscripción:</strong> $80.000 a $1.600.000/mes según el plan del hotel</span></div>
+    <div class="check"><span class="ico">📈</span><span><strong>Comisión:</strong> 1% por cada reserva que se procese a través de la plataforma</span></div>
+    <div class="check"><span class="ico">🤖</span><span><strong>Extras:</strong> Inteligencia Artificial para precios (+$160.000/mes), reportes avanzados (+$200.000/mes)</span></div>
+  </div>
+
+  <div class="card card-info">
+    <p><strong>Proyección de ingresos (en COP):</strong></p>
+    <div class="check"><span class="ico">📅</span><span><strong>Año 1:</strong> ~$48-126 millones (30-80 hoteles en el Golfo de Morrosquillo)</span></div>
+    <div class="check"><span class="ico">📅</span><span><strong>Año 2:</strong> ~$250-590 millones (200-400 hoteles, Costa Caribe)</span></div>
+    <div class="check"><span class="ico">📅</span><span><strong>Año 3:</strong> ~$1.000-2.000 millones (800+ hoteles en Colombia)</span></div>
+  </div>
+</section>
+
+<!-- ──────────────── HOJA DE RUTA ──────────────── -->
+<section>
+  <h2>🗺️ ¿Cómo llegamos?</h2>
+
+  <div class="tl">
+    <div class="tl-item">
+      <div class="fase">Fase 0 — Beta (Meses 1-3)</div>
+      <div class="cuando">Inversión: ~$360-500K USD</div>
+      <p>10 hoteles de prueba en Tolú y Coveñas. Versión básica funcionando con WhatsApp y conexión manual a Booking.</p>
+    </div>
+    <div class="tl-item">
+      <div class="fase">Fase 1 — Golfo de Morrosquillo (Meses 4-12)</div>
+      <div class="cuando">Inversión: ~$470-642K USD</div>
+      <p>30-80 hoteles. Lanzamiento del Plan Free para captar hoteleros. Alianzas con alcaldías de Tolú y Coveñas.</p>
+    </div>
+    <div class="tl-item">
+      <div class="fase">Fase 2 — Costa Caribe (Meses 13-24)</div>
+      <div class="cuando">Inversión: ~$836K-1.14M USD</div>
+      <p>200-400 hoteles. Certificación oficial de Booking y Despegar. Expansión a Cartagena, Santa Marta, Barranquilla.</p>
+    </div>
+    <div class="tl-item">
+      <div class="fase">Fase 3 — Colombia + LATAM (Mes 25+)</div>
+      <div class="cuando">¡Breakeven!</div>
+      <p>800+ hoteles. Inteligencia Artificial para precios. Multi-propiedad. Expansión a Panamá, Costa Rica, México.</p>
+    </div>
+  </div>
+
+  <p class="currency-note" style="font-size:0.82rem;">Los costos de cada fase están en USD porque los servidores y salarios se cotizan internacionalmente.</p>
+</section>
+
+<!-- ──────────────── ¿DÓNDE SE HOSTEA? ──────────────── -->
+<section>
+  <h2>☁️ ¿Dónde vive la plataforma?</h2>
+
+  <div class="card">
+    <p>En internet, en servidores. Pero a diferencia de otras empresas, podemos empezar pagando <strong>casi cero</strong> e ir creciendo:</p>
+  </div>
+
+  <div class="card card-success" style="background:#f0faf0;">
+    <p style="font-weight:700;color:var(--accent);">🟢 Empezando (MVP) — $0-2/mes USD</p>
+    <p style="font-size:0.85rem;">Usamos <strong>Fly.io</strong> (crédito gratis que no expira) + <strong>Neon</strong> (base de datos gratis). La app se sirve estática desde la nube (Cloudflare) para ahorrar memoria. Corre 24/7, no se duerme. Desde Colombia se ve rápido (~50-70ms).</p>
+  </div>
+
+  <div class="card card-highlight">
+    <p style="font-weight:700;color:var(--secondary);">🟡 Creciendo — $19-50/mes USD</p>
+    <p style="font-size:0.85rem;">Cuando ya tengamos hoteles pagando, migramos a Render (un proveer de servidores más económic). Mismo código, misma base de datos, solo cambia el plan. Se migra en 10 minutos.</p>
+  </div>
+
+  <div class="card card-info">
+    <p style="font-weight:700;color:var(--primary);">🔴 Definitivo — $200-500/mes USD</p>
+    <p style="font-size:0.85rem;">Cuando tengamos 500+ hoteles, migramos a Amazon Web Services (AWS). Es lo que usan Netflix, Booking.com y las grandes. Cero límites. La migración es transparente.</p>
+  </div>
+
+  <p style="font-size:0.78rem;color:#999;text-align:center;">💡 Los costos de infraestructura están en USD porque se pagan a empresas internacionales (Fly.io, AWS, etc.)</p>
+</section>
+
+<!-- ──────────────── ¿POR QUÉ AHORA? ──────────────── -->
+<section>
+  <h2>🎯 ¿Por qué esto funciona ahora?</h2>
+
+  <div class="card">
+    <div class="check"><span class="ico">🗺️</span><span><strong>No hay competencia en la Costa:</strong> SiteMinder y Cloudbeds son caros, en inglés, y no tienen presencia en el Golfo de Morrosquillo. Nadie está atendiendo a estos hoteles.</span></div>
+    <div class="check"><span class="ico">📱</span><span><strong>El celular es la oficina:</strong> Más del 90% de los hoteleros de la zona solo usan smartphone. No tienen laptop. Nuestra plataforma funciona 100% en el celular, sin instalar nada.</span></div>
+    <div class="check"><span class="ico">💬</span><span><strong>WhatsApp es el canal principal:</strong> No revisan correo, viven en WhatsApp. Por eso todo llega por WhatsApp.</span></div>
+    <div class="check"><span class="ico">📈</span><span><strong>El turismo crece:</strong> Cada año llegan más turistas al Golfo de Morrosquillo. Los hoteles necesitan organizarse.</span></div>
+  </div>
+</section>
+
+<!-- ──────────────── ¿DÓNDE ENTRAS TÚ? ──────────────── -->
+<section>
+  <h2>🤝 ¿Y yo qué puedo aportar?</h2>
+
+  <div class="card card-success">
+    <div class="check"><span class="ico">💡</span><span><strong>Ideas y visión:</strong> Conocés la región, los hoteleros, cómo funciona el turismo en la Costa. Eso es lo más valioso.</span></div>
+    <div class="check"><span class="ico">🤝</span><span><strong>Contactos locales:</strong> Alcaldías, asociaciones de hoteleros, dueños de hoteles en Tolú y Coveñas. Las puertas que puedas abrir.</span></div>
+    <div class="check"><span class="ico">💰</span><span><strong>Inversión:</strong> Ayudar a conseguir el capital inicial (~$360-500K USD para el MVP).</span></div>
+    <div class="check"><span class="ico">📢</span><span><strong>En la región:</strong> Presencia en ferias, relacionamiento con el sector turístico, estrategia de captación de hoteles.</span></div>
+  </div>
+</section>
+
+<!-- ──────────────── CTA ──────────────── -->
+<section>
+  <div class="cta">
+    <h3>¿Te interesa?</h3>
+    <p>Hablemos. Este proyecto puede ser el primer channel manager hecho para la Costa Caribe colombiana. Un mercado que nadie más está atendiendo.</p>
+    <p style="margin-top:6px;">🇨🇴 Hecho en Colombia, para Colombia.</p>
+    <p class="file">📄 Plan detallado: docs/PLAN-EJECUCION.md · 📱 Este mismo documento: docs/plan-ejecucion.html</p>
+  </div>
+</section>
+
+<!-- ──────────────── PREGUNTAS FRECUENTES ──────────────── -->
+<section>
+  <h2>❓ Preguntas frecuentes</h2>
+
+  <div class="card">
+    <div class="faq-q">¿Esto es una app que se descarga?</div>
+    <div class="faq-a">No necesita descargar nada de Play Store. Se abre como una app desde el navegador Chrome del celular. Ocupa menos de 5 MB y funciona aunque no haya internet.</div>
+
+    <div class="faq-q">¿El hotelero necesita tarjeta de crédito?</div>
+    <div class="faq-a">No. Para el plan Free, solo su número de celular. Para los planes pagos, puede pagar con Nequi, PSE (transferencia bancaria) o Efecty (en efectivo).</div>
+
+    <div class="faq-q">¿Qué pasa si el hotel cierra 3 meses al año?</div>
+    <div class="faq-a">No hay problema. La suscripción es fija y económica desde $80.000/mes. Incluso cerrado, la plataforma mantiene los datos del hotel para cuando reabra.</div>
+
+    <div class="faq-q">¿Cómo se evita el overbooking?</div>
+    <div class="faq-a">Cada vez que se vende una habitación, la plataforma la descuenta del inventario y actualiza todos los canales en tiempo real (o envía WhatsApp para que el hotelero lo haga manualmente hasta que tengamos la certificación oficial).</div>
+
+    <div class="faq-q">¿Y si un hotel no sabe de tecnología?</div>
+    <div class="faq-a">La plataforma está diseñada para el hotelero que solo usa WhatsApp. Onboarding con videos en español y soporte por WhatsApp. Además, los primeros 10 hoteles beta reciben entrenamiento presencial en Tolú.</div>
+  </div>
+</section>
+
+<div class="footer">
+  <p>🏝️ Plataforma Hotelera B2B del Golfo de Morrosquillo</p>
+  <p>Versión 3.1 · 29 de junio de 2026 · Hecho en Colombia 🇨🇴</p>
+  <p style="font-size:0.7rem;color:#bbb;margin-top:4px;">Precios en COP a tasa ~$4.100/USD. Infraestructura e inversión en USD.</p>
+</div>
+
+</div><!-- /container -->
+</body>
+</html>

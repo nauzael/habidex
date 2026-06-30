@@ -1,0 +1,467 @@
+/* ===========================================================
+   HotelManager — Componentes (8)
+   1. KPI Card
+   2. Status Badge
+   3. Room Card
+   4. Reservation Row
+   5. Primary Button
+   6. Input Field
+   7. Bottom Navigation
+   8. Skeleton Loader (shimmer)
+   =========================================================== */
+
+/* --- Base reset scoped --- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text);
+  background: var(--bg-warm);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01';
+}
+img, svg { display: block; max-width: 100%; }
+button { font: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+
+/* ============================================================
+   1. KPI CARD
+   - Variantes: default | featured (con accent)
+   - Muestra label, valor grande, cambio, ícono arrow
+   ============================================================ */
+.kpi-card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-6);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--t-base), box-shadow var(--t-base);
+  overflow: hidden;
+}
+.kpi-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.kpi-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+}
+.kpi-card__label {
+  font-family: var(--font-body);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+.kpi-card__icon {
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.kpi-card__value {
+  font-family: var(--font-display);
+  font-size: var(--fs-display);
+  line-height: var(--lh-display);
+  font-weight: 700;
+  letter-spacing: var(--ls-display);
+  color: var(--text);
+  margin-bottom: var(--sp-3);
+  font-variant-numeric: tabular-nums;
+}
+.kpi-card__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.kpi-card__delta--up    { color: var(--success); }
+.kpi-card__delta--down  { color: var(--danger); }
+.kpi-card__delta-icon {
+  width: 18px; height: 18px;
+  display: grid; place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--sage-100);
+  color: var(--success);
+}
+.kpi-card__delta--down .kpi-card__delta-icon {
+  background: var(--red-100);
+  color: var(--danger);
+}
+/* Featured: highlight con terracota */
+.kpi-card--featured {
+  background: linear-gradient(160deg, var(--slate-900) 0%, var(--slate-800) 100%);
+  border-color: var(--slate-800);
+  color: var(--text-inverse);
+}
+.kpi-card--featured .kpi-card__label { color: rgba(255,255,255,0.7); }
+.kpi-card--featured .kpi-card__value { color: var(--text-inverse); }
+.kpi-card--featured .kpi-card__icon  { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.12); color: var(--text-inverse); }
+.kpi-card--featured .kpi-card__delta { color: rgba(255,255,255,0.85); }
+.kpi-card--featured .kpi-card__delta-icon { background: var(--terracota-500); color: var(--text-inverse); }
+
+/* ============================================================
+   2. STATUS BADGE
+   - Variantes: available | occupied | cleaning | maintenance | pending
+   - Pill con dot + label
+   ============================================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-caption);
+  font-weight: 550;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.badge__dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.badge--available    { background: var(--sage-100);   color: var(--sage-600); }
+.badge--occupied     { background: var(--terracota-100); color: var(--terracota-600); }
+.badge--cleaning     { background: var(--amber-100);  color: var(--amber-500); }
+.badge--maintenance  { background: var(--red-100);    color: var(--red-500); }
+.badge--pending      { background: var(--slate-100);  color: var(--slate-700); }
+.badge--info         { background: var(--slate-100);  color: var(--slate-700); }
+.badge--neutral      { background: var(--surface-2);  color: var(--text-muted); border: 1px solid var(--border); }
+
+/* ============================================================
+   3. ROOM CARD
+   - Card cuadrada con número de habitación + status + tipo
+   ============================================================ */
+.room-card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-4);
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-height: 110px;
+  transition: transform var(--t-fast), box-shadow var(--t-fast);
+}
+.room-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.room-card__header { display: flex; align-items: center; justify-content: space-between; }
+.room-card__number {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-h3);
+  letter-spacing: var(--ls-h3);
+  color: var(--text);
+}
+.room-card__type {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+.room-card__guest {
+  font-size: var(--fs-small);
+  color: var(--text);
+  margin-top: auto;
+  padding-top: var(--sp-2);
+  border-top: 1px solid var(--border);
+}
+/* Estado con franja lateral */
+.room-card--available    { border-left: 3px solid var(--success); }
+.room-card--occupied     { border-left: 3px solid var(--accent); }
+.room-card--cleaning     { border-left: 3px solid var(--warning); }
+.room-card--maintenance  { border-left: 3px solid var(--danger); }
+
+/* ============================================================
+   4. RESERVATION ROW
+   - Fila con avatar/iniciales, nombre, fechas, monto, badge
+   ============================================================ */
+.res-row {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  transition: transform var(--t-fast), box-shadow var(--t-fast);
+}
+.res-row:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); border-color: var(--border-strong); }
+.res-row__avatar {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--slate-700), var(--slate-500));
+  color: var(--text-inverse);
+  display: grid; place-items: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-small);
+  letter-spacing: 0.02em;
+}
+.res-row__body { min-width: 0; }
+.res-row__name {
+  font-weight: 600;
+  font-size: var(--fs-h4);
+  color: var(--text);
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.res-row__meta {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.res-row__meta-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-soft); }
+.res-row__right { text-align: right; }
+.res-row__amount {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-h4);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 4px;
+}
+.res-row__action { margin-top: var(--sp-2); }
+
+/* ============================================================
+   5. PRIMARY BUTTON
+   - Variantes: primary | secondary | ghost | terracota
+   - Tamaños: sm | md | lg
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  font-family: var(--font-body);
+  font-weight: 550;
+  font-size: var(--fs-body);
+  letter-spacing: 0.005em;
+  line-height: 1;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid transparent;
+  padding: 12px 22px;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast), transform var(--t-fast);
+  white-space: nowrap;
+  text-decoration: none;
+}
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.btn--sm { padding: 8px 16px; font-size: var(--fs-small); }
+.btn--lg { padding: 16px 28px; font-size: var(--fs-h4); }
+
+.btn--primary {
+  background: var(--primary);
+  color: var(--text-inverse);
+  border-color: var(--primary);
+}
+.btn--primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+
+.btn--accent {
+  background: var(--accent);
+  color: var(--text-inverse);
+  border-color: var(--accent);
+}
+.btn--accent:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+.btn--secondary {
+  background: var(--card);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.btn--secondary:hover { background: var(--surface-2); border-color: var(--text-soft); }
+
+.btn--ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: transparent;
+}
+.btn--ghost:hover { background: var(--surface-2); }
+
+.btn--locked {
+  background: #E5E7EB;
+  color: #9CA3AF;
+  border-color: #E5E7EB;
+  cursor: not-allowed;
+}
+.btn--locked:hover { background: #E5E7EB; }
+
+/* Icon-only round button */
+.btn--icon {
+  width: 40px; height: 40px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+/* ============================================================
+   6. INPUT FIELD
+   - Label + input + helper/errror
+   ============================================================ */
+.field { display: block; }
+.field__label {
+  display: block;
+  font-size: var(--fs-small);
+  font-weight: 550;
+  color: var(--text);
+  margin-bottom: var(--sp-2);
+  letter-spacing: 0.005em;
+}
+.field__wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.field__icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-soft);
+  pointer-events: none;
+}
+.field__input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  font-weight: 450;
+  color: var(--text);
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 14px 14px 44px;
+  line-height: 1.2;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+  -webkit-appearance: none;
+  appearance: none;
+}
+.field__input::placeholder { color: var(--text-soft); font-weight: 400; }
+.field__input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(30, 46, 74, 0.08);
+}
+.field__input:focus + .field__trailing { color: var(--primary); }
+.field__input--no-icon { padding-left: 14px; }
+.field__trailing {
+  position: absolute;
+  right: 14px;
+  color: var(--text-soft);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+.field__helper {
+  display: block;
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+.field__error {
+  display: block;
+  font-size: var(--fs-caption);
+  color: var(--danger);
+  margin-top: 6px;
+  font-weight: 500;
+}
+.field--error .field__input { border-color: var(--danger); }
+.field--error .field__input:focus { box-shadow: 0 0 0 4px rgba(201, 90, 90, 0.10); }
+
+/* ============================================================
+   7. BOTTOM NAVIGATION (mobile)
+   - 5 tabs, ícono + label, con active indicator pill arriba
+   ============================================================ */
+.bottom-nav {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  padding: 6px 4px 14px;
+  z-index: 10;
+}
+.bottom-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  border-radius: var(--radius-md);
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 550;
+  letter-spacing: 0.02em;
+  position: relative;
+  transition: color var(--t-fast);
+  min-height: 48px;
+}
+.bottom-nav__item:hover { color: var(--text-muted); }
+.bottom-nav__item--active { color: var(--primary); }
+.bottom-nav__item--active::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.bottom-nav__icon { width: 22px; height: 22px; display: grid; place-items: center; }
+
+/* ============================================================
+   8. SKELETON LOADER (shimmer)
+   - Bloques con animación shimmer
+   - Variantes: text | circle | block
+   ============================================================ */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skel {
+  display: block;
+  background: linear-gradient(90deg,
+    var(--surface-2) 0%,
+    rgba(229, 224, 216, 0.6) 40%,
+    var(--surface-2) 80%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: var(--radius-sm);
+}
+.skel--text   { height: 14px; width: 100%; border-radius: 4px; margin-bottom: 8px; }
+.skel--text-sm { height: 11px; width: 60%; border-radius: 4px; }
+.skel--circle { border-radius: 50%; }
+.skel--block  { height: 80px; width: 100%; border-radius: var(--radius-md); }
+.skel--title  { height: 22px; width: 50%; border-radius: 6px; margin-bottom: 12px; }
+.skel--value  { height: 36px; width: 40%; border-radius: 8px; margin-bottom: 12px; }
+
+/* Skeleton card (composite) */
+.skel-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-6);
+}

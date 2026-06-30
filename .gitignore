@@ -1,0 +1,65 @@
+# ─── Dependencies ───────────────────────────────────────────────────────────
+node_modules/
+.pnp/
+.pnp.js
+
+# ─── Environment & Secrets ─────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+config/*.local.*
+*.key
+*.pem
+*.crt
+
+# ─── Build Output ──────────────────────────────────────────────────────────
+dist/
+build/
+out/
+.next/
+*.tsbuildinfo
+.eslintcache
+
+# ─── Python ────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+*.egg
+.venv/
+venv/
+env/
+
+# ─── OS ────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ─── IDE & Editor ──────────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/settings.json
+.vscode/launch.json
+*.sublime-workspace
+
+# ─── Project-specific ──────────────────────────────────────────────────────
+# Spec Kit bridge backups
+context_envelope.json.bak
+
+# OpenCode plugin cache
+.opencode/plugins/
+
+# Plan artifacts (keep git history, ignore generated)
+# docs/plan/ is versioned
+
+# Backup files from specify init
+*.bak
+
+# Spec Kit generated files (keep structure, cache can be ignored)
+.specify/init-options.json
+.specify/extension-registry.json

@@ -1,0 +1,73 @@
+version: "3.8"
+
+services:
+  # ─── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: hotel-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: hotel_platform
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+      POSTGRES_MULTIPLE_EXTENSIONS: pgcrypto,uuid-ossp,postgis
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/db/init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev -d hotel_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: hotel-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── API (NestJS) ───────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runner
+    container_name: hotel-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://neondb_owner:npg_SMtp28OqKZDd@ep-rapid-truth-adr2gf8n-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+      UPSTASH_REDIS_URL: https://capital-heron-155079.upstash.io
+      UPSTASH_REDIS_TOKEN: gQAAAAAAAl3HAAIgcDE2ZTdhYzkwMWMzMzY0ZDYyOGZjZjk1MWY2OTFhZjc0OA
+      JWT_SECRET: dev-secret
+      PORT: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./apps/api:/app/apps/api:ro
+      - ./packages:/app/packages:ro
+    develop:
+      watch:
+        - path: ./apps/api/src
+          action: sync
+          target: /app/apps/api/src
+
+volumes:
+  pgdata:
+  redisdata:

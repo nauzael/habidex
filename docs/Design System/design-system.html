@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HotelManager · Design System</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="components.css" />
+  <link rel="stylesheet" href="app.css" />
+  <link rel="stylesheet" href="ds.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <a href="index.html" class="sidebar__brand">
+        <span class="sidebar__brand-mark">H</span>
+        <span>HotelManager</span>
+      </a>
+      <nav class="sidebar__nav">
+        <a href="dashboard.html" class="sidebar__item">
+          <span class="sidebar__item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>
+          Panel
+        </a>
+        <a href="mobile-2.html" class="sidebar__item">
+          <span class="sidebar__item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg></span>
+          App móvil
+        </a>
+        <a href="design-system.html" class="sidebar__item sidebar__item--active">
+          <span class="sidebar__item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg></span>
+          Design system
+        </a>
+        <a href="mobile-1.html" class="sidebar__item">
+          <span class="sidebar__item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg></span>
+          Login
+        </a>
+        <span class="sidebar__group-label">COMPONENTES</span>
+        <a href="#kpi" class="sidebar__item">KPI Card</a>
+        <a href="#badge" class="sidebar__item">Status Badge</a>
+        <a href="#room" class="sidebar__item">Room Card</a>
+        <a href="#reservation" class="sidebar__item">Reservation Row</a>
+        <a href="#button" class="sidebar__item">Button</a>
+        <a href="#input" class="sidebar__item">Input</a>
+        <a href="#nav" class="sidebar__item">Bottom Nav</a>
+        <a href="#skeleton" class="sidebar__item">Skeleton</a>
+      </nav>
+      <div class="sidebar__cta">
+        <div class="sidebar__cta-title">Plan Free</div>
+        <div class="sidebar__cta-text">Actualiza a Pro para acceder a reportes avanzados y Revenue Forecast.</div>
+        <a href="#" class="btn btn--secondary btn--sm" style="background:rgba(255,255,255,0.10);color:#fff;border-color:rgba(255,255,255,0.18)">Mejorar plan</a>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <div>
+      <header class="topbar">
+        <div class="topbar__search">
+          <svg class="topbar__search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="text" placeholder="Buscar token, componente…" />
+          <span class="topbar__kbd">⌘ K</span>
+        </div>
+        <div class="topbar__actions">
+          <span class="topbar__plan-badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>
+            FREE
+          </span>
+          <button class="topbar__icon-btn" aria-label="Notificaciones"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M14 21a2 2 0 1 1-4 0"/></svg><span class="dot"></span></button>
+          <div class="topbar__user">
+            <div class="topbar__user-avatar">JJ</div>
+            <div class="topbar__user-info">
+              <div class="topbar__user-name">Don José Ramírez</div>
+              <div class="topbar__user-mail">Hotel Las Acacias · Cartagena</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <div class="page-header">
+          <div>
+            <span class="eyebrow">SISTEMA</span>
+            <h1 class="page-header__title">Design System</h1>
+            <p class="page-header__sub">Tokens, componentes y patrones para HotelManager. Aplicado de forma consistente en panel desktop y PWA móvil.</p>
+          </div>
+          <div class="page-header__actions">
+            <a class="btn btn--secondary btn--sm" href="dashboard.html">Ver panel</a>
+            <a class="btn btn--primary btn--sm" href="mobile-2.html">Ver app móvil</a>
+          </div>
+        </div>
+
+        <!-- =========== COLORES =========== -->
+        <section class="ds-section">
+          <div class="ds-section__head">
+            <span class="ds-section__num">01</span>
+            <h2 class="ds-section__title">Color</h2>
+            <p class="ds-section__sub">Paleta primaria, semántica y neutros. Regla: máximo 2 usos de <code>--accent</code> visibles por pantalla.</p>
+          </div>
+          <div class="swatch-grid">
+            <div class="swatch">
+              <div class="swatch__chip" style="background:#1E2E4A"></div>
+              <div class="swatch__name">Deep Slate 900</div>
+              <div class="swatch__hex">#1E2E4A</div>
+              <div class="swatch__role">--primary · sidebar · texto fuerte</div>
+            </div>
+            <div class="swatch">
+              <div class="swatch__chip" style="background:#2A3E5A"></div>
+              <div class="swatch__name">Slate 800</div>
+              <div class="swatch__hex">#2A3E5A</div>
+              <div class="swatch__role">--primary-hover · gradient end</div>
+            </div>
+            <div class="swatch">
+              <div class="swatch__chip" style="background:#2E4A7A"></div>
+              <div class="swatch__name">Slate Medium</div>
+              <div class="swatch__hex">#2E4A7A</div>
+              <div class="swatch__role">links · hovers slate</div>
+            </div>
+            <div class="swatch">
+              <div class="swatch__chip" style="background:#D47A5A"></div>
+              <div class="swatch__name">Terracota 500</div>
+              <div class="swatch__hex">#D47A5A</div>
+              <div class="swatch__role">--accent · CTA · highlight</div>
+            </div>
+            <div class="swatch">
+              <div class="swatch__chip" style="background:#5A8C6F"></div>
+              <div class="swatch__name">Sage 500</div>
+              <div class="swatch__hex">#5A8C6F</div>
+              <div class="swatch__role">--success · confirmación</div>
+            </div>
+            <div class="swatch">
+              <div class="swatch__chip" style="background:#C49B4A"></div>
+              <div class="swatch__name">Warm Amber</div>
+              <div class="swatch__hex">#C49B4A</div>
+              <div class="swatch__role">--warning · limpieza</div>
+            </div>
+            <div class="swatch">
+              <div class="swatch__chip" style="background:#C95A5A"></div>
+              <div class="swatch__name">Soft Red</div>
+              <div class="swatch__hex">#C95A5A</div>
+              <div class="swatch__role">--danger · mantenimiento</div>
+            </div>
+            <div class="swatch">
+              <div class="swatch__chip" style="background:#F7F4F0;border:1px solid #E5E0D8"></div>
+              <div class="swatch__name">Bg Warm</div>
+              <div class="swatch__hex">#F7F4F0</div>
+              <div class="swatch__role">--bg-warm · canvas</div>
+            </div>
+            <div class="swatch">
+              <div class="swatch__chip" style="background:#FFFFFF;border:1px solid #E5E0D8"></div>
+              <div class="swatch__name">Card</div>
+              <div class="swatch__hex">#FFFFFF</div>
+              <div class="swatch__role">--card · superficies</div>
+            </div>
+            <div class="swatch">
+              <div class="swatch__chip" style="background:#1C1C2E"></div>
+              <div class="swatch__name">Text</div>
+              <div class="swatch__hex">#1C1C2E</div>
+              <div class="swatch__role">--text · cuerpo</div>
+            </div>
+            <div class="swatch">
+              <div class="swatch__chip" style="background:#6B6B80"></div>
+              <div class="swatch__name">Text Muted</div>
+              <div class="swatch__hex">#6B6B80</div>
+              <div class="swatch__role">metadata · captions</div>
+            </div>
+            <div class="swatch">
+              <div class="swatch__chip" style="background:#E5E0D8"></div>
+              <div class="swatch__name">Border</div>
+              <div class="swatch__hex">#E5E0D8</div>
+              <div class="swatch__role">--border · separadores</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =========== TIPOGRAFÍA =========== -->
+        <section class="ds-section">
+          <div class="ds-section__head">
+            <span class="ds-section__num">02</span>
+            <h2 class="ds-section__title">Tipografía</h2>
+            <p class="ds-section__sub"><strong>Plus Jakarta Sans</strong> para display (peso 600-800), <strong>Inter</strong> para cuerpo. Escala 1.25×, máximo 6-7 tamaños por pantalla.</p>
+          </div>
+          <div class="type-row"><span class="type-row__label">Display 48 / -0.025em / 1.05</span><div class="type-row__sample" style="font-family:var(--font-display);font-size:48px;line-height:1.05;letter-spacing:-0.025em;font-weight:700;">Habitaciones hoy</div></div>
+          <div class="type-row"><span class="type-row__label">H1 36 / -0.02em</span><div class="type-row__sample" style="font-family:var(--font-display);font-size:36px;line-height:1.15;letter-spacing:-0.02em;font-weight:700;">Resumen del día</div></div>
+          <div class="type-row"><span class="type-row__label">H2 28 / -0.015em</span><div class="type-row__sample" style="font-family:var(--font-display);font-size:28px;line-height:1.25;letter-spacing:-0.015em;font-weight:700;">Reservas pendientes</div></div>
+          <div class="type-row"><span class="type-row__label">H3 22 / -0.01em</span><div class="type-row__sample" style="font-family:var(--font-display);font-size:22px;line-height:1.35;letter-spacing:-0.01em;font-weight:600;">Habitación 304</div></div>
+          <div class="type-row"><span class="type-row__label">Body 15 / 1.55</span><div class="type-row__sample" style="font-family:var(--font-body);font-size:15px;line-height:1.55;">María López y su hijo llegaron a las 14:30. Se hospedan 3 noches en suite con desayuno incluido.</div></div>
+          <div class="type-row"><span class="type-row__label">Small 13 / 1.5</span><div class="type-row__sample" style="font-family:var(--font-body);font-size:13px;line-height:1.5;color:var(--text-muted);">Confirmación enviada a maria.lopez@example.com</div></div>
+          <div class="type-row"><span class="type-row__label">EYEBROW 11 / +0.08em</span><div class="type-row__sample" style="font-family:var(--font-body);font-size:11px;line-height:1.4;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--text-muted);">RESUMEN DE HOY</div></div>
+        </section>
+
+        <!-- =========== COMPONENTES =========== -->
+
+        <section class="ds-section" id="kpi">
+          <div class="ds-section__head">
+            <span class="ds-section__num">03</span>
+            <h2 class="ds-section__title">KPI Card</h2>
+            <p class="ds-section__sub">Variante <code>default</code> y <code>featured</code> (gradiente slate). Un solo KPI destacado por panel para guiar la mirada.</p>
+          </div>
+          <div class="grid-kpis">
+            <div class="kpi-card kpi-card--featured">
+              <div class="kpi-card__header">
+                <span class="kpi-card__label">Habitaciones ocupadas</span>
+                <span class="kpi-card__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17l5-5 5 5M7 7h10"/></svg></span>
+              </div>
+              <div class="kpi-card__value">28</div>
+              <div class="kpi-card__delta kpi-card__delta--up">
+                <span class="kpi-card__delta-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l8 10H4z"/></svg></span>
+                +12% vs ayer
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card__header">
+                <span class="kpi-card__label">Check-ins hoy</span>
+                <span class="kpi-card__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg></span>
+              </div>
+              <div class="kpi-card__value">12</div>
+              <div class="kpi-card__delta kpi-card__delta--up">
+                <span class="kpi-card__delta-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l8 10H4z"/></svg></span>
+                8 confirmados
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card__header">
+                <span class="kpi-card__label">Ingresos del día</span>
+                <span class="kpi-card__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+              </div>
+              <div class="kpi-card__value">$4.2M</div>
+              <div class="kpi-card__delta kpi-card__delta--up">
+                <span class="kpi-card__delta-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l8 10H4z"/></svg></span>
+                +8% vs promedio
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card__header">
+                <span class="kpi-card__label">Ocupación</span>
+                <span class="kpi-card__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+              </div>
+              <div class="kpi-card__value">82%</div>
+              <div class="kpi-card__delta">
+                <span class="kpi-card__delta-icon" style="background:var(--slate-100);color:var(--slate-700)"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-8 10h16z" transform="rotate(180 12 12)"/></svg></span>
+                24 de 30 habitaciones
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="ds-section" id="badge">
+          <div class="ds-section__head">
+            <span class="ds-section__num">04</span>
+            <h2 class="ds-section__title">Status Badge</h2>
+            <p class="ds-section__sub">Estados del ciclo de vida de una habitación. Dot + label, alto contraste.</p>
+          </div>
+          <div class="ds-row">
+            <span class="badge badge--available"><span class="badge__dot"></span>Disponible</span>
+            <span class="badge badge--occupied"><span class="badge__dot"></span>Ocupada</span>
+            <span class="badge badge--cleaning"><span class="badge__dot"></span>Limpieza</span>
+            <span class="badge badge--maintenance"><span class="badge__dot"></span>Mantenimiento</span>
+            <span class="badge badge--pending"><span class="badge__dot"></span>Pendiente</span>
+            <span class="badge badge--info"><span class="badge__dot"></span>Confirmada</span>
+            <span class="badge badge--neutral"><span class="badge__dot"></span>Borrador</span>
+          </div>
+        </section>
+
+        <section class="ds-section" id="room">
+          <div class="ds-section__head">
+            <span class="ds-section__num">05</span>
+            <h2 class="ds-section__title">Room Card</h2>
+            <p class="ds-section__sub">Tarjeta por habitación. Franja lateral según estado. Click → detalle.</p>
+          </div>
+          <div class="grid-3">
+            <div class="room-card room-card--available">
+              <div class="room-card__header">
+                <span class="room-card__number">204</span>
+                <span class="badge badge--available"><span class="badge__dot"></span>Libre</span>
+              </div>
+              <div class="room-card__type">Suite · 2 camas dobles</div>
+              <div class="room-card__guest">Lista para check-in</div>
+            </div>
+            <div class="room-card room-card--occupied">
+              <div class="room-card__header">
+                <span class="room-card__number">305</span>
+                <span class="badge badge--occupied"><span class="badge__dot"></span>Ocupada</span>
+              </div>
+              <div class="room-card__type">Estándar · 1 cama king</div>
+              <div class="room-card__guest">Salida: 15 jun, 11:00</div>
+            </div>
+            <div class="room-card room-card--cleaning">
+              <div class="room-card__header">
+                <span class="room-card__number">112</span>
+                <span class="badge badge--cleaning"><span class="badge__dot"></span>Limpieza</span>
+              </div>
+              <div class="room-card__type">Estándar · 2 camas sencillas</div>
+              <div class="room-card__guest">Limpieza: 14:30 · 15 min</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="ds-section" id="reservation">
+          <div class="ds-section__head">
+            <span class="ds-section__num">06</span>
+            <h2 class="ds-section__title">Reservation Row</h2>
+            <p class="ds-section__sub">Fila para lista de reservas. Avatar de iniciales, nombre, fechas, monto, badge de estado.</p>
+          </div>
+          <div class="grid" style="display:grid;gap:var(--sp-3)">
+            <div class="res-row">
+              <div class="res-row__avatar">ML</div>
+              <div class="res-row__body">
+                <div class="res-row__name">María López Restrepo</div>
+                <div class="res-row__meta">
+                  <span>Hab. 305</span>
+                  <span class="res-row__meta-dot"></span>
+                  <span>12-15 jun</span>
+                  <span class="res-row__meta-dot"></span>
+                  <span>2 huéspedes</span>
+                </div>
+              </div>
+              <div class="res-row__right">
+                <div class="res-row__amount">$1.245.000</div>
+                <span class="badge badge--info"><span class="badge__dot"></span>Confirmada</span>
+              </div>
+            </div>
+            <div class="res-row">
+              <div class="res-row__avatar" style="background:linear-gradient(135deg,var(--terracota-500),var(--terracota-600))">CR</div>
+              <div class="res-row__body">
+                <div class="res-row__name">Carlos Ramírez Pérez</div>
+                <div class="res-row__meta">
+                  <span>Hab. 204</span>
+                  <span class="res-row__meta-dot"></span>
+                  <span>15-18 jun</span>
+                  <span class="res-row__meta-dot"></span>
+                  <span>1 huésped</span>
+                </div>
+              </div>
+              <div class="res-row__right">
+                <div class="res-row__amount">$680.000</div>
+                <span class="badge badge--pending"><span class="badge__dot"></span>Pendiente</span>
+              </div>
+            </div>
+            <div class="res-row">
+              <div class="res-row__avatar" style="background:linear-gradient(135deg,var(--sage-500),var(--sage-600))">AG</div>
+              <div class="res-row__body">
+                <div class="res-row__name">Ana Gómez de Hernández</div>
+                <div class="res-row__meta">
+                  <span>Hab. 410</span>
+                  <span class="res-row__meta-dot"></span>
+                  <span>13-16 jun</span>
+                  <span class="res-row__meta-dot"></span>
+                  <span>3 huéspedes</span>
+                </div>
+              </div>
+              <div class="res-row__right">
+                <div class="res-row__amount">$2.180.000</div>
+                <span class="badge badge--info"><span class="badge__dot"></span>Confirmada</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="ds-section" id="button">
+          <div class="ds-section__head">
+            <span class="ds-section__num">07</span>
+            <h2 class="ds-section__title">Button</h2>
+            <p class="ds-section__sub">Variantes: <code>primary</code> (CTA fuerte), <code>accent</code> (highlight), <code>secondary</code> (alternativa), <code>ghost</code> (terciaria), <code>locked</code> (Free tier).</p>
+          </div>
+          <div class="ds-row ds-row--stack">
+            <div class="ds-row">
+              <button class="btn btn--primary">Confirmar reserva</button>
+              <button class="btn btn--accent">+ Nueva reserva</button>
+              <button class="btn btn--secondary">Cancelar</button>
+              <button class="btn btn--ghost">Ver detalle</button>
+              <button class="btn btn--locked">Revenue forecast (Pro)</button>
+            </div>
+            <div class="ds-row">
+              <button class="btn btn--primary btn--sm">Guardar</button>
+              <button class="btn btn--accent btn--sm">Crear</button>
+              <button class="btn btn--primary btn--lg">Confirmar check-in</button>
+              <button class="btn btn--secondary btn--icon" aria-label="Más"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="ds-section" id="input">
+          <div class="ds-section__head">
+            <span class="ds-section__num">08</span>
+            <h2 class="ds-section__title">Input Field</h2>
+            <p class="ds-section__sub">Label + ícono opcional + helper. Estados: <code>default</code>, <code>focus</code>, <code>error</code>.</p>
+          </div>
+          <div class="grid-3" style="align-items:start">
+            <div class="field">
+              <label class="field__label">Correo electrónico</label>
+              <div class="field__wrap">
+                <svg class="field__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+                <input class="field__input" placeholder="nombre@hotel.com" />
+              </div>
+              <span class="field__helper">Usa el correo registrado en tu plan.</span>
+            </div>
+            <div class="field">
+              <label class="field__label">Buscar reserva</label>
+              <div class="field__wrap">
+                <svg class="field__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                <input class="field__input" value="López" />
+                <button class="field__trailing" style="background:none;border:0;color:var(--text-muted);font:inherit">×</button>
+              </div>
+              <span class="field__helper">3 resultados encontrados.</span>
+            </div>
+            <div class="field field--error">
+              <label class="field__label">Contraseña</label>
+              <div class="field__wrap">
+                <svg class="field__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                <input class="field__input" value="123" type="password" />
+              </div>
+              <span class="field__error">Mínimo 8 caracteres con un número.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="ds-section" id="nav">
+          <div class="ds-section__head">
+            <span class="ds-section__num">09</span>
+            <h2 class="ds-section__title">Bottom Navigation</h2>
+            <p class="ds-section__sub">5 destinos, indicador terracota sobre el ítem activo, mínimo 48px de alto para hit target.</p>
+          </div>
+          <div class="ds-mobile-frame">
+            <div class="ds-mobile-frame__screen">
+              <div class="ds-mobile-frame__content">
+                <div class="ds-mobile-frame__title">Vista móvil</div>
+                <div class="ds-mobile-frame__sub">El bottom nav permanece sticky al fondo de cada pantalla.</div>
+              </div>
+              <nav class="bottom-nav">
+                <a class="bottom-nav__item bottom-nav__item--active" href="mobile-2.html">
+                  <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>
+                  Panel
+                </a>
+                <a class="bottom-nav__item" href="mobile-3.html">
+                  <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></span>
+                  Reservas
+                </a>
+                <a class="bottom-nav__item" href="mobile-4.html">
+                  <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 18V8l9-5 9 5v10M9 21v-6h6v6"/></svg></span>
+                  Habitaciones
+                </a>
+                <a class="bottom-nav__item" href="mobile-5.html">
+                  <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+                  Huéspedes
+                </a>
+                <a class="bottom-nav__item" href="mobile-6.html">
+                  <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M7 14l4-4 4 4 5-5"/></svg></span>
+                  Reportes
+                </a>
+              </nav>
+            </div>
+          </div>
+        </section>
+
+        <section class="ds-section" id="skeleton">
+          <div class="ds-section__head">
+            <span class="ds-section__num">10</span>
+            <h2 class="ds-section__title">Skeleton Loader</h2>
+            <p class="ds-section__sub">Estados de carga con shimmer. Aplicado al cargar el dashboard móvil y al cambiar de pantalla.</p>
+          </div>
+          <div class="grid-2">
+            <div class="skel-card">
+              <div class="skel skel--title"></div>
+              <div class="skel skel--value"></div>
+              <div class="skel skel--text"></div>
+              <div class="skel skel--text"></div>
+              <div class="skel skel--text-sm"></div>
+            </div>
+            <div class="skel-card">
+              <div style="display:flex;gap:14px;align-items:center;margin-bottom:14px">
+                <div class="skel skel--circle" style="width:44px;height:44px"></div>
+                <div style="flex:1">
+                  <div class="skel skel--text" style="width:60%"></div>
+                  <div class="skel skel--text-sm" style="width:40%"></div>
+                </div>
+              </div>
+              <div style="display:flex;gap:14px;align-items:center;margin-bottom:14px">
+                <div class="skel skel--circle" style="width:44px;height:44px"></div>
+                <div style="flex:1">
+                  <div class="skel skel--text" style="width:70%"></div>
+                  <div class="skel skel--text-sm" style="width:30%"></div>
+                </div>
+              </div>
+              <div style="display:flex;gap:14px;align-items:center">
+                <div class="skel skel--circle" style="width:44px;height:44px"></div>
+                <div style="flex:1">
+                  <div class="skel skel--text" style="width:55%"></div>
+                  <div class="skel skel--text-sm" style="width:35%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer class="ds-footer">
+          <p>HotelManager Design System v1.0 · Tokens en <code>tokens.css</code> · Componentes en <code>components.css</code></p>
+        </footer>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

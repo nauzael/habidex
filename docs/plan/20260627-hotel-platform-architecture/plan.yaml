@@ -1,0 +1,930 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# PLAN: Arquitectura Plataforma B2B de Gestión Hotelera
+# Fase: Discovery & Architecture Design
+# Produce: spec.md, plan.md, data-model.md, architecture docs
+# ═══════════════════════════════════════════════════════════════════════════
+plan_id: "20260627-hotel-platform-architecture"
+objective: >
+  Definir la arquitectura técnica completa y el stack tecnológico para una
+  plataforma B2B SaaS de gestión de disponibilidad hotelera en tiempo real
+  (Channel Manager + Revenue Management) para hoteles independientes en LATAM.
+  Entregables: stack concreto justificado, arquitectura de alto nivel, modelo
+  de datos inicial, roadmap de fases con milestones, estimaciones de equipo
+  y presupuesto, estrategia de integraciones.
+created_at: "2026-06-27T22:00:00Z"
+created_by: "gem-planner"
+status: pending
+tldr: >
+  Plan de discovery y diseño arquitectónico en 5 waves. Wave 1: Research de
+  dominio hotelero (OTAs, protocolos, regulación LATAM). Wave 2: Definición de
+  stack tecnológico con justificación por capa. Wave 3: Diseño de arquitectura
+  y modelo de datos. Wave 4: Documentación (spec.md, plan.md, data-model.md,
+  roadmap de fases con presupuesto). Wave 5: Review y validación cruzada.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PLAN METRICS
+# ═══════════════════════════════════════════════════════════════════════════
+plan_metrics:
+  wave_1_task_count: 3
+  total_dependencies: 8
+  risk_score: high
+
+quality_warnings:
+  - "El mercado LATAM tiene fragmentación de PMS locales; la investigación debe cubrir sistemas legacy prevalentes en México y Colombia"
+  - "Los SLAs de disponibilidad (<100ms consulta, <5s sincronización) son ambiciosos para una arquitectura multi-región inicial; requiere validación de viabilidad con las regiones AWS disponibles"
+  - "El pricing dinámico con ML requiere datos históricos que no existirán en el MVP; la fase 2 debe planificar un período de cold-start"
+  - "Rate parity detection requiere scraping o APIs de OTAs que pueden tener restricciones legales; verificar compliance en MX/CO"
+  - "Las integraciones OTA requieren certificación previa (Booking.com, Expedia); los timelines deben incluir tiempo de certification queue"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PLANNING ANALYSIS (HIGH complexity)
+# ═══════════════════════════════════════════════════════════════════════════
+open_questions:
+  - question: "¿Cuál es el estado actual de las regulaciones de rate parity en México y Colombia?"
+    context: "Algunos países han prohibido cláusulas de rate parity (Francia, Austria, Italia). Verificar si MX/CO tienen restricciones que afecten la funcionalidad de rate parity detection."
+    type: decision_blocker
+    affects: ["HOTEL-RESEARCH-DOMAIN", "HOTEL-SPEC"]
+  - question: "¿Qué PMS locales dominan el mercado hotelero independiente en México y Colombia?"
+    context: "La integración con PMS es crítica para el MVP. PMS cloud como Cloudbeds/Mews tienen APIs documentadas, pero hoteles pequeños pueden usar sistemas legacy sin API."
+    type: decision_blocker
+    affects: ["HOTEL-RESEARCH-DOMAIN", "HOTEL-DATA-MODEL"]
+  - question: "¿AWS Local Zones o regiones edge están disponibles en las principales ciudades de México (CDMX, Cancún) y Colombia (Bogotá, Cartagena)?"
+    context: "El SLA de <100ms para consultas de disponibilidad requiere latencia ultra-baja. Verificar opciones de edge computing en las zonas turísticas objetivo."
+    type: decision_blocker
+    affects: ["HOTEL-ARCH-DESIGN", "HOTEL-STACK"]
+  - question: "¿Qué gateway de pago tiene mejor cobertura y menores comisiones para transacciones B2B transfronterizas LATAM?"
+    context: "La plataforma cobrará a hoteles (B2B), no a huéspedes. Se necesita un payment gateway que soporte cobros recurrentes en MXN, COP, y USD con buenas tasas de conversión."
+    type: decision_blocker
+    affects: ["HOTEL-STACK", "HOTEL-SPEC"]
+
+assumptions:
+  - "Los hoteles independientes en LATAM tienen conectividad internet confiable suficiente para operar un SaaS cloud (no on-premise requerido)"
+  - "Las OTAs principales (Booking.com, Expedia, Despegar, Airbnb) proveen APIs de disponibilidad/tarifas con documentación adecuada para integración"
+  - "El mercado objetivo inicial (50-200 hoteles en MX/CO) no requiere multi-tenancy complejo; un modelo de database-per-tenant o schema-per-tenant es viable"
+  - "La regulación de datos en LATAM (similar a LGPD de Brasil) no impone requisitos de residencia de datos más estrictos que GDPR para la fase MVP"
+  - "Se puede iniciar con una arquitectura modular monolith + event bus y evolucionar a microservicios cuando la escala lo exija (Fase 3+)"
+  - "Los hoteles aceptarán un modelo SaaS con suscripción mensual + comisión por reserva; el payment gateway debe soportar ambos modelos"
+  - "La plataforma será web-first (React/Next.js); mobile app nativa se considera en Fase 4 si hay demanda"
+  - "El equipo inicial será de 6-8 personas (2 backends, 2 frontends, 1 DevOps, 1 QA, 1 PM, 1 Designer) escalando a 15-20 en Fase 2"
+
+pre_mortem:
+  overall_risk_level: high
+  critical_failure_modes:
+    - scenario: "Las integraciones OTA toman 6+ meses por certificación y colas de partner programs, bloqueando el MVP"
+      likelihood: medium
+      impact: critical
+      mitigation: "Iniciar el proceso de partnership con Booking.com y Expedia desde el día 1 (antes de escribir código). Paralelamente, implementar un channel manager básico con actualización manual/CSV como fallback para demostrar valor temprano."
+    - scenario: "La sincronización de inventario pooled tiene race conditions que causan overbooking en producción"
+      likelihood: medium
+      impact: critical
+      mitigation: "Usar PostgreSQL con SERIALIZABLE isolation level + Redis distributed locks + idempotency keys en todas las operaciones de reserva. Implementar un reconciliation job que compare inventario real vs reservas cada 5 minutos como safety net. Testing exhaustivo con chaos engineering (particiones de red, latencia, fallos de OTA)."
+    - scenario: "El pricing dinámico produce tarifas no rentables (por debajo del costo) debido a bugs en el algoritmo de stacking de promociones"
+      likelihood: low
+      impact: high
+      mitigation: "Implementar un floor price por tipo de habitación que ninguna regla puede atravesar. Validación automática en el motor de reglas: toda tarifa final >= floor_price. Alertas automáticas si el margen cae por debajo del threshold configurado. Circuit breaker para desactivar pricing automático si se detectan anomalías."
+    - scenario: "Latencia de consulta de disponibilidad >500ms en horas pico (Black Friday, puentes vacacionales) causando timeout en OTAs y pérdida de reservas"
+      likelihood: medium
+      impact: high
+      mitigation: "Cache strategy multinivel: Redis (caché de disponibilidad con TTL 5s) + CDN para datos estáticos de hotel. Pre-warming de caché para hoteles populares. Rate limiting agresivo en API pública para proteger el sistema. Auto-scaling basado en métricas de latencia p99."
+    - scenario: "Fuga de datos de pricing entre competidores (hoteles que usan la plataforma pueden inferir tarifas de otros hoteles)"
+      likelihood: low
+      impact: high
+      mitigation: "Database-per-tenant desde el inicio. Row-level security en PostgreSQL. API Gateway con tenant isolation. Competitive benchmarking solo muestra datos agregados/anonymizados con mínimo 5 hoteles por cohorte. Auditoría de accesos cross-tenant."
+    - scenario: "El equipo no logra contratar talento con experiencia en protocolos OTA (OTA XML, HTNG) en LATAM, retrasando integraciones clave"
+      likelihood: medium
+      impact: medium
+      mitigation: "Documentar exhaustivamente los protocolos OTA internamente. Contratar 1 senior con experiencia en travel tech (remoto si es necesario). Usar librerías open-source existentes para OTA XML parsing. Plan de capacitación interna de 4-6 semanas para nuevos desarrolladores."
+
+coordination_notes:
+  - "HOTEL-RESEARCH-DOMAIN debe completarse antes que HOTEL-RESEARCH-STACK porque las decisiones de stack dependen de los protocolos y requisitos del dominio hotelero"
+  - "HOTEL-DATA-MODEL y HOTEL-ARCH-DESIGN pueden ejecutarse en paralelo (Wave 3) ya que el research de dominio y stack ya están completos"
+  - "HOTEL-DOC-PLAN depende de HOTEL-DATA-MODEL y HOTEL-ARCH-DESIGN para incluir diagramas de arquitectura y esquemas de base de datos"
+  - "El reviewer en Wave 5 debe tener acceso a todos los documentos generados en Wave 4 para validación cruzada de consistencia"
+
+contracts:
+  - from_task: "HOTEL-RESEARCH-DOMAIN"
+    to_task: "HOTEL-RESEARCH-STACK"
+    interface: "research_domain_output"
+    format: "Markdown document with: OTA protocol details, PMS landscape LATAM, regulatory requirements, payment gateway options"
+  - from_task: "HOTEL-RESEARCH-STACK"
+    to_task: "HOTEL-ARCH-DESIGN"
+    interface: "stack_decision_output"
+    format: "Markdown document with: final stack per layer, justification, version constraints, LATAM-specific considerations"
+  - from_task: "HOTEL-ARCH-DESIGN"
+    to_task: "HOTEL-DOC-PLAN"
+    interface: "architecture_output"
+    format: "Markdown document with: system architecture diagram (text), component descriptions, data flow, deployment topology"
+  - from_task: "HOTEL-DATA-MODEL"
+    to_task: "HOTEL-DOC-PLAN"
+    interface: "data_model_output"
+    format: "Markdown document with: entity definitions, PostgreSQL DDL, relationships, indexes, partitioning strategy"
+  - from_task: "HOTEL-DOC-PLAN"
+    to_task: "HOTEL-REVIEW"
+    interface: "all_documents"
+    format: "Complete set: spec.md, plan.md, data-model.md in specs/001-b2b-hotel-platform/"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TASKS
+# ═══════════════════════════════════════════════════════════════════════════
+tasks:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WAVE 1: Domain & Industry Research (parallel — sin dependencias)
+  # ═══════════════════════════════════════════════════════════════════════════
+  - id: "HOTEL-RESEARCH-DOMAIN"
+    title: "Research: Dominio hotelero, protocolos OTA, regulación LATAM"
+    description: >
+      Investigación exhaustiva del dominio hotelero para LATAM:
+      1. Protocolos de integración OTA: OTA XML (OpenTravel Alliance 2.0),
+         HTNG, REST APIs propias de Booking.com, Expedia, Despegar, Airbnb.
+         Documentar: autenticación, endpoints, rate limits, formatos de 
+         mensaje (OTA_HotelAvailRQ/RS, OTA_HotelResRQ/RS), webhooks.
+      2. PMS landscape en México y Colombia: Cloudbeds, Mews, Opera, sistemas
+         locales (Micros, Zeus, Cenium, Hotello, etc.). APIs disponibles,
+         formatos de exportación, protocolos de sincronización.
+      3. Regulación: rate parity laws en LATAM, protección de datos (LFPDPPP
+         México, Ley 1581 Colombia), facturación electrónica, requisitos
+         fiscales para SaaS B2B transfronterizo.
+      4. Payment gateways: Stripe, MercadoPago, PayPal, Conekta, PayU —
+         cobertura LATAM, soporte multi-moneda (MXN, COP, USD), modelos de
+         suscripción recurrente, comisiones, settlement times.
+      5. Competitive landscape: SiteMinder, Cloudbeds, D-Edge, RateGain —
+         funcionalidades, pricing, market share en LATAM, debilidades.
+      Output: `specs/001-b2b-hotel-platform/research.md` con hallazgos,
+      tablas comparativas, y recomendaciones para cada área.
+    wave: 1
+    agent: "gem-researcher"
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: "specs/001-b2b-hotel-platform/research.md"
+        description: "Output: documento de investigación de dominio hotelero"
+    acceptance_criteria:
+      - "Documenta protocolos OTA XML 2.0 con ejemplos de mensajes request/response reales"
+      - "Lista al menos 5 PMS relevantes para hoteles independientes en MX/CO con estado de API"
+      - "Incluye análisis de regulación de rate parity y protección de datos en México y Colombia"
+      - "Compara al menos 4 payment gateways con tabla de: cobertura MX/CO, multi-moneda, suscripciones, comisiones"
+      - "Incluye competitive analysis de al menos 4 competidores con feature comparison matrix"
+      - "Identifica al menos 3 debilidades de competidores que la plataforma puede explotar"
+    success_criteria:
+      - "research.md >= 3000 palabras con secciones claramente delimitadas"
+      - "Todas las tablas comparativas tienen fuentes verificables (links o referencias)"
+      - "Recomendaciones accionables para alimentar decisiones de stack y arquitectura"
+    recommended_skills: ["find-docs"]
+    handoff:
+      do_not_reinvestigate:
+        - "Protocolos OTA XML ya documentados en research.md"
+        - "Payment gateways ya comparados en research.md"
+      target_files:
+        - "specs/001-b2b-hotel-platform/research.md"
+      minimal_change: "N/A — primer documento"
+      acceptance_checks:
+        - "research.md existe en specs/001-b2b-hotel-platform/"
+        - "Contiene secciones: OTA Protocols, PMS Landscape, Regulation, Payments, Competitive Analysis"
+        - "Todas las tablas comparativas están pobladas con datos reales (no placeholders)"
+
+  - id: "HOTEL-RESEARCH-ARCH-PATTERNS"
+    title: "Research: Patrones arquitectónicos para channel managers y sistemas de alta concurrencia en travel tech"
+    description: >
+      Investigación técnica de patrones arquitectónicos específicos para
+      sistemas de disponibilidad hotelera:
+      1. Pooled inventory patterns: cómo otros channel managers (SiteMinder,
+         Cloudbeds, D-Edge) sincronizan inventario a múltiples canales.
+         Estudiar: two-way sync, ARI (Availability, Rates, Inventory) push,
+         pull-based vs push-based.
+      2. Concurrencia y overbooking prevention: patrón de optimistic locking
+         con version numbers, transactional outbox pattern para sincronización
+         OTA, distributed sagas para reservas multi-step, idempotency keys.
+         Lecciones de incidentes de overbooking en la industria (ej: Airbnb,
+         Booking.com outages públicos).
+      3. Cache strategies para hoteles: Redis con TTL por hotel, cache
+         invalidation patterns (write-through, write-behind), materialized
+         views para availability queries, CDN edge caching para datos
+         estáticos de hotel.
+      4. Event-driven architectures en travel: evento sourcing para
+         auditabilidad de cambios de disponibilidad, CQRS para separar
+         reads (consultas de disponibilidad) de writes (reservas), Kafka
+         como event backbone.
+      5. Multi-tenancy patterns: database-per-tenant vs schema-per-tenant
+         vs row-level security para 50-5000 hoteles. Isolation, backup,
+         migration complexity trade-offs.
+      6. Rate limiting y API throttling para APIs públicas: token bucket,
+         sliding window, distributed rate limiting con Redis.
+      Output: `specs/001-b2b-hotel-platform/architecture-patterns.md`
+    wave: 1
+    agent: "gem-researcher"
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: "specs/001-b2b-hotel-platform/architecture-patterns.md"
+        description: "Output: patrones arquitectónicos para channel managers"
+    acceptance_criteria:
+      - "Documenta pooled inventory sync con al menos 3 estrategias diferentes (push, pull, hybrid)"
+      - "Incluye diagramas de secuencia (texto) para flujo de reserva con optimistic locking"
+      - "Compara al menos 3 estrategias de caché con latencia p99 estimada y tasa de stale data"
+      - "Analiza multi-tenancy patterns con tabla comparativa: isolation, cost, backup complexity, migration"
+      - "Documenta transactional outbox pattern con ejemplo de implementación (pseudocódigo)"
+      - "Incluye rate limiting strategies con referencia a algoritmos (token bucket, sliding window log)"
+    success_criteria:
+      - "architecture-patterns.md >= 2500 palabras"
+      - "Cada patrón incluye: problema que resuelve, solución, trade-offs, referencias a implementaciones conocidas"
+      - "Decisiones arquitectónicas preliminares con justificación (ADR-style)"
+    recommended_skills: ["find-docs"]
+    handoff:
+      do_not_reinvestigate:
+        - "Pooled inventory patterns ya documentados"
+        - "Cache strategies ya evaluadas"
+        - "Multi-tenancy trade-offs ya analizados"
+      target_files:
+        - "specs/001-b2b-hotel-platform/architecture-patterns.md"
+      minimal_change: "N/A — primer documento"
+      acceptance_checks:
+        - "architecture-patterns.md existe"
+        - "Contiene: Pooled Inventory, Concurrency, Cache Strategies, Event-Driven, Multi-tenancy, Rate Limiting"
+        - "Incluye diagramas de secuencia en formato texto"
+
+  - id: "HOTEL-RESEARCH-INFRA"
+    title: "Research: Infraestructura cloud en LATAM — regiones AWS/GCP, latencias, costos"
+    description: >
+      Investigación de opciones de infraestructura cloud para servir tráfico
+      desde México y Colombia con latencia óptima:
+      1. AWS regions relevantes: us-east-1 (N. Virginia — ~50ms desde CDMX),
+         sa-east-1 (São Paulo — ~120ms desde Bogotá), Local Zones en
+         CDMX/Querétaro, Edge Locations en Bogotá. Comparar latencias
+         medidas (cloudping.co) y servicios disponibles en cada región.
+      2. GCP regions: us-central1 (Iowa), southamerica-east1 (São Paulo).
+         Comparar con AWS en: latencia a MX/CO, servicios disponibles,
+         pricing.
+      3. Costos estimados de infraestructura para MVP (50-200 hoteles):
+         compute (EC2/ECS/EKS vs Lambda), RDS PostgreSQL, ElastiCache Redis,
+         MSK Kafka, CloudFront CDN, S3. Estimación mensual con calculadora
+         AWS.
+      4. Opciones de edge computing para <100ms latency SLA: CloudFront
+         Functions, Lambda@Edge, Cloudflare Workers. Viabilidad técnica y
+         casos de uso (availability cache en el edge).
+      5. Disaster recovery: RPO/RTO para datos transaccionales de reservas,
+         multi-región active-passive, backups automatizados, point-in-time
+         recovery en RDS.
+      6. Compliance: residencia de datos en México/Colombia, certificaciones
+         necesarias (SOC 2, ISO 27001) para clientes enterprise.
+      Output: `specs/001-b2b-hotel-platform/infrastructure-research.md`
+    wave: 1
+    agent: "gem-researcher"
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: "specs/001-b2b-hotel-platform/infrastructure-research.md"
+        description: "Output: investigación de infraestructura cloud LATAM"
+    acceptance_criteria:
+      - "Compara AWS vs GCP para servir MX/CO con tabla de latencias por región"
+      - "Incluye estimación de costos mensuales de infraestructura MVP detallada por servicio"
+      - "Analiza edge computing options con casos de uso concretos para availability cache"
+      - "Define estrategia de disaster recovery con RPO < 5 min y RTO < 30 min"
+      - "Lista servicios AWS/GCP disponibles en regiones que cubren LATAM"
+      - "Incluye pricing tier para cada servicio (on-demand, reserved, savings plan)"
+    success_criteria:
+      - "infrastructure-research.md >= 2000 palabras"
+      - "Estimación de costos con calculadora oficial AWS/GCP (no estimados a ojo)"
+      - "Decisión preliminar: AWS vs GCP con justificación basada en latencia, servicios, y costo"
+    recommended_skills: ["find-docs"]
+    handoff:
+      do_not_reinvestigate:
+        - "Latencias AWS/GCP desde MX/CO ya medidas"
+        - "Costos MVP estimados por servicio"
+        - "Decisión cloud provider preliminar documentada"
+      target_files:
+        - "specs/001-b2b-hotel-platform/infrastructure-research.md"
+      minimal_change: "N/A — primer documento"
+      acceptance_checks:
+        - "infrastructure-research.md existe"
+        - "Contiene: Cloud Provider Comparison, Cost Estimates, Edge Computing, DR Strategy, Compliance"
+        - "Decisión cloud provider con justificación"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WAVE 2: Stack Definition (deps: Wave 1 research)
+  # ═══════════════════════════════════════════════════════════════════════════
+  - id: "HOTEL-STACK"
+    title: "Definir stack tecnológico con justificación por capa"
+    description: >
+      Basado en la investigación de Wave 1, definir el stack tecnológico
+      concreto con justificación detallada para cada capa. Debe cubrir:
+      
+      1. **Backend API**: Node.js + TypeScript + NestJS
+         - Justificación: ecosistema maduro, tipado fuerte, patrones
+           enterprise (modules, decorators, guards, interceptors), excelente
+           soporte para OpenAPI/Swagger, librerías maduras para OAuth2,
+           WebSockets, y gRPC. Gran pool de talento en LATAM.
+         - Alternativas evaluadas: Go (mejor performance pero menor pool
+           talento LATAM), Python/FastAPI (bueno para ML pero GIL limita
+           concurrencia alta), Java/Spring (robusto pero verboso y lento
+           para iterar en startup).
+         - Versiones: Node.js 22 LTS, TypeScript 5.5+, NestJS 11
+      
+      2. **Frontend**: React 19 + Next.js 15 (App Router) + Tailwind CSS 4
+         - Justificación: SSR/SSG para dashboards con buena performance,
+           React Server Components para reducir JS en cliente, ecosistema
+           masivo de componentes (shadcn/ui, Radix UI), mejor DX para
+           aplicaciones data-heavy. Tailwind para consistencia visual.
+         - Alternativas evaluadas: Vue/Nuxt (excelente pero menor ecosistema
+           de componentes enterprise), Angular (demasiado pesado para
+           dashboards), Svelte (ecosistema inmaduro para enterprise).
+         - State management: Zustand o TanStack Query para server state.
+      
+      3. **Base de datos**: PostgreSQL 16 (transaccional) + TimescaleDB 2.x
+         (time-series métricas) + Redis 7 (caché) + Elasticsearch 8 (búsqueda)
+         - PostgreSQL: ACID para reservas, SERIALIZABLE isolation, row-level
+           security para multi-tenancy, particionamiento nativo para
+           inventario por hotel, extensiones: PostGIS (ubicación hoteles),
+           pg_cron (jobs programados).
+         - TimescaleDB: hypertables para métricas de ocupación/ADR/RevPAR,
+           compresión automática, continuous aggregates para dashboards,
+           retención de datos configurable.
+         - Redis: caché de disponibilidad (<100ms SLA), rate limiting,
+           session store, distributed locks (Redlock), pub/sub para
+           invalidación de caché en tiempo real.
+         - Elasticsearch: búsqueda de hoteles, autocompletado, filtros
+           facetados, agregaciones para analítica.
+      
+      4. **Message Broker**: Apache Kafka (eventos de negocio) + RabbitMQ
+         (tareas asíncronas)
+         - Kafka: event backbone para sincronización de canales (inventario,
+           tarifas, reservas → eventos que los channel connectors consumen),
+           event sourcing para auditoría de cambios, log compacted topics
+           para snapshot de estado actual.
+         - RabbitMQ: tareas asíncronas con DLQ (notificaciones OTA fallidas,
+           exportación de reportes, envío de emails).
+      
+      5. **Infraestructura**: AWS + Docker + Kubernetes (EKS) + Terraform
+         - AWS: región primaria us-east-1 (mejor latencia a MX), sa-east-1
+           como DR. Servicios: EKS, RDS Aurora PostgreSQL, ElastiCache,
+           MSK (Kafka), OpenSearch (Elasticsearch managed), CloudFront,
+           Route 53, S3, Lambda@Edge.
+         - Docker: contenedores multi-stage builds optimizados.
+         - Kubernetes: EKS con Karpenter para auto-scaling, Helm charts
+           para deployments, ArgoCD para GitOps.
+         - Terraform: IaC con módulos reutilizables, workspaces por
+           ambiente (dev/staging/prod), state en S3 + DynamoDB lock.
+      
+      6. **CI/CD**: GitHub Actions + ArgoCD (GitOps)
+         - Pipeline: lint → test → build → push image → update manifest →
+           ArgoCD sync. Ambientes: dev (auto-deploy en PR merge a main),
+           staging (manual approve), prod (manual approve + change ticket).
+      
+      7. **Monitoreo**: Grafana + Prometheus + Loki + Tempo + Sentry
+         - Métricas: Prometheus con exporters para Node.js, PostgreSQL,
+           Redis, Kafka. Dashboards Grafana: occupancy, ADR, RevPAR, API
+           latency p50/p95/p99, error rates, channel sync health.
+         - Logs: Loki con labels por tenant/hotel/service. Retención 90 días.
+         - Traces: Tempo con OpenTelemetry instrumentation en todos los
+           servicios. Trace ID propagation en headers HTTP.
+         - Errores: Sentry con source maps para frontend, alertas en Slack.
+      
+      8. **API Gateway**: Kong o Traefik
+         - Rate limiting por tenant y endpoint, autenticación OAuth2,
+           request/response transformation, logging, circuit breaker.
+      
+      9. **Auth**: Keycloak (self-hosted) o Auth0
+         - OAuth2 + OIDC, roles (hotel_admin, hotel_staff, agency, admin),
+           MFA, SSO para clientes enterprise.
+      
+      Output: `specs/001-b2b-hotel-platform/stack-decision.md`
+    wave: 2
+    agent: "gem-researcher"
+    status: pending
+    dependencies:
+      - "HOTEL-RESEARCH-DOMAIN"
+      - "HOTEL-RESEARCH-ARCH-PATTERNS"
+      - "HOTEL-RESEARCH-INFRA"
+    conflicts_with: []
+    context_files:
+      - path: "specs/001-b2b-hotel-platform/research.md"
+        description: "Input: investigación de dominio hotelero y pagos LATAM"
+      - path: "specs/001-b2b-hotel-platform/architecture-patterns.md"
+        description: "Input: patrones de channel managers y alta concurrencia"
+      - path: "specs/001-b2b-hotel-platform/infrastructure-research.md"
+        description: "Input: opciones cloud LATAM y costos"
+    acceptance_criteria:
+      - "Stack definido para cada capa con justificación de 2-3 párrafos (no bullet points)"
+      - "Incluye alternativas evaluadas y razón de descarte para cada capa"
+      - "Versiones concretas para todas las dependencias (no 'latest')"
+      - "Pricing estimado para herramientas SaaS (Sentry, Auth0, Datadog) con tier recomendado"
+      - "Tabla resumen al inicio: capa → tecnología → versión → justificación (1 línea)"
+      - "Considera pool de talento LATAM como factor de decisión"
+    success_criteria:
+      - "stack-decision.md >= 3000 palabras"
+      - "Cada capa tiene: opción elegida, alternativas, justificación, versiones, pricing"
+      - "Diagrama de stack en formato texto (ASCII art) al inicio del documento"
+    recommended_skills: ["find-docs"]
+    handoff:
+      do_not_reinvestigate:
+        - "Stack decisions ya tomadas y justificadas en stack-decision.md"
+        - "Versiones concretas ya definidas"
+        - "Pricing de herramientas SaaS ya estimado"
+      target_files:
+        - "specs/001-b2b-hotel-platform/stack-decision.md"
+      minimal_change: "Cada capa requiere decisión justificada"
+      acceptance_checks:
+        - "stack-decision.md existe"
+        - "Cubre las 9 capas listadas en la descripción"
+        - "Todas las versiones son concretas (no 'latest', no '^x.y.z')"
+        - "Tabla resumen incluida al inicio"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WAVE 3: Architecture & Data Model Design (deps: Wave 2)
+  # ═══════════════════════════════════════════════════════════════════════════
+  - id: "HOTEL-ARCH-DESIGN"
+    title: "Diseñar arquitectura de alto nivel — diagrama, componentes, flujos de datos"
+    description: >
+      Diseñar la arquitectura completa del sistema basada en el stack
+      definido en Wave 2. Entregable: documento de arquitectura con:
+      
+      1. **Arquitectura de Alto Nivel**: diagrama en texto ASCII mostrando
+         todos los componentes y sus relaciones:
+         - API Gateway (Kong) → Backend Services
+         - Core Services: Availability Service, Rate Service, Booking Service,
+           Channel Sync Service, Promotion Engine, Analytics Service, Auth Service
+         - Data Layer: PostgreSQL, Redis, TimescaleDB, Elasticsearch, Kafka
+         - External: OTA APIs, PMS Systems, Payment Gateways
+         - Infra: AWS EKS, CloudFront, Route 53, S3
+      
+      2. **Patrón arquitectónico**: Modular Monolith (Fase 1-2) → Microservicios
+         (Fase 3+). Justificación: empezar con monolith modular bien definido
+         (bounded contexts), evolucionar a microservicios cuando la escala
+         lo exija. Cada módulo tiene su propio schema PostgreSQL, eventos
+         vía Kafka para comunicación inter-módulo.
+      
+      3. **Flujos de datos críticos** (diagramas de secuencia en texto):
+         a. Consulta de disponibilidad (<100ms SLA):
+            CDN/Edge → API Gateway → Redis lookup (availability cache) →
+            PostgreSQL (solo en cache miss) → Response
+         b. Reserva (sincronización multi-canal <5s):
+            OTA webhook → Booking Service → validación + lock optimista →
+            PostgreSQL commit → Kafka event (reservation.confirmed) →
+            Channel Sync Service consume → notificar otras OTAs vía API
+         c. Sincronización de inventario pooled:
+            Hotel cambia disponibilidad → Availability Service → PostgreSQL →
+            Kafka event (inventory.changed) → Channel Sync Service → push
+            ARI a todas las OTAs conectadas → webhook confirmación
+         d. Pricing dinámico:
+            Scheduled job (cada 15 min) → Rate Service → consultar occupancy
+            actual + forecast + reglas de pricing → calcular nuevas tarifas →
+            PostgreSQL + Kafka event (rate.updated) → notificar OTAs
+      
+      4. **Service Boundaries** (bounded contexts):
+         - Availability Context: inventario, habitaciones, restricciones
+         - Rate Context: BAR, tarifas derivadas, pricing rules
+         - Booking Context: reservas, cancelaciones, modificaciones
+         - Channel Context: conectores OTA/PMS, sincronización
+         - Promotion Context: reglas de descuento, stacking, validación
+         - Analytics Context: métricas, dashboards, forecasting
+         - Tenant Context: hoteles, usuarios, roles, suscripciones
+      
+      5. **Estrategia de Multi-tenancy**: database-per-tenant para isolation
+         máxima. Connection pooling con PgBouncer. Migrations versionadas
+         por tenant. Backup individual por hotel.
+      
+      6. **Seguridad**: OAuth2/OIDC para autenticación, RBAC para autorización,
+         API Keys para integraciones externas, rate limiting por tenant,
+         WAF en CloudFront, secrets en AWS Secrets Manager, encryption
+         at rest (AES-256) y en tránsito (TLS 1.3).
+      
+      7. **Estrategia de Deployment**: EKS multi-AZ en us-east-1, pod
+         anti-affinity para alta disponibilidad, HPA (Horizontal Pod
+         Autoscaler) basado en CPU + métricas custom (latencia p99),
+         Karpenter para node auto-scaling, canary deployments con
+         Flagger + Linkerd service mesh.
+      
+      Output: `specs/001-b2b-hotel-platform/architecture.md`
+    wave: 3
+    agent: "gem-planner"
+    status: pending
+    dependencies:
+      - "HOTEL-STACK"
+    conflicts_with: []
+    context_files:
+      - path: "specs/001-b2b-hotel-platform/stack-decision.md"
+        description: "Input: stack tecnológico definido con versiones"
+      - path: "specs/001-b2b-hotel-platform/architecture-patterns.md"
+        description: "Input: patrones arquitectónicos documentados"
+    acceptance_criteria:
+      - "Diagrama ASCII de arquitectura de alto nivel con todos los componentes"
+      - "4 diagramas de secuencia en texto para flujos críticos con latencias target"
+      - "7 bounded contexts definidos con responsabilidades claras"
+      - "Estrategia multi-tenancy documentada con justificación"
+      - "Estrategia de seguridad cubre: auth, authz, API keys, rate limiting, encryption"
+      - "Estrategia de deployment define: HA, auto-scaling, canary, service mesh"
+    success_criteria:
+      - "architecture.md >= 4000 palabras"
+      - "Diagramas de secuencia incluyen: actores, componentes, pasos numerados, latencias"
+      - "Bounded contexts con: responsabilidad, entidades principales, eventos que publica/consume"
+      - "Estrategia de evolución: monolith → microservicios con triggers y milestones"
+    handoff:
+      do_not_reinvestigate:
+        - "Arquitectura de alto nivel ya diseñada"
+        - "Flujos de datos críticos ya documentados"
+        - "Bounded contexts ya definidos"
+      target_files:
+        - "specs/001-b2b-hotel-platform/architecture.md"
+      minimal_change: "Documento completo de arquitectura requerido"
+      acceptance_checks:
+        - "architecture.md existe"
+        - "Contiene: System Diagram, Data Flows, Bounded Contexts, Multi-tenancy, Security, Deployment"
+        - "Todos los diagramas son legibles en texto plano"
+
+  - id: "HOTEL-DATA-MODEL"
+    title: "Diseñar modelo de datos inicial — entidades, relaciones, DDL PostgreSQL"
+    description: >
+      Diseñar el modelo de datos completo para el sistema. Entregable:
+      documento con esquema de base de datos, DDL, y estrategia de
+      particionamiento/índices.
+      
+      1. **Entidades Core** (con atributos, tipos, constraints):
+         - Hotel: id, name, timezone, currency, address, star_rating, 
+           checkin_time, checkout_time, active_channels[], created_at
+         - RoomType: id, hotel_id, name, description, base_occupancy, 
+           max_occupancy, size_sqm, bed_type, amenities[], images[]
+         - Room: id, room_type_id, room_number, floor, status (AVAILABLE, 
+           OCCUPIED, MAINTENANCE, OUT_OF_ORDER), last_updated
+         - Inventory: hotel_id, room_type_id, date, total_rooms, 
+           available_rooms, booked_rooms, oversell_limit, version 
+           (optimistic lock), updated_at. UNIQUE(hotel_id, room_type_id, date)
+         - Restriction: hotel_id, room_type_id, date, min_los, max_los, 
+           cta (closed to arrival), ctd (closed to departure), stop_sell, 
+           version. UNIQUE(hotel_id, room_type_id, date)
+      
+      2. **Entidades de Pricing**:
+         - RatePlan: id, hotel_id, name, type (BAR, DERIVED, PROMOTIONAL, 
+           CHANNEL_SPECIFIC), base_rate_plan_id (para derivadas), 
+           currency, rounding_rule, is_active
+         - RatePlanRule: id, rate_plan_id, rule_type (SEASONALITY, DAY_OF_WEEK, 
+           ADVANCE_BOOKING, OCCUPANCY_BASED, LENGTH_OF_STAY), 
+           configuration (JSONB con parámetros de la regla), priority
+         - Rate: hotel_id, room_type_id, rate_plan_id, date, amount, 
+           currency, version. UNIQUE(hotel_id, room_type_id, rate_plan_id, date)
+         - DerivedRateRule: id, rate_plan_id, source_rate_plan_id, 
+           adjustment_type (PERCENTAGE, FIXED_AMOUNT, FORMULA), 
+           adjustment_value, rounding
+      
+      3. **Entidades de Booking**:
+         - Booking: id, hotel_id, channel (DIRECT, BOOKING_COM, EXPEDIA, 
+           DESPEGAR, AIRBNB), channel_booking_id, guest_name, guest_email, 
+           guest_phone, checkin_date, checkout_date, total_amount, currency, 
+           status (CONFIRMED, CANCELLED, MODIFIED, NO_SHOW, CHECKED_IN, 
+           CHECKED_OUT), idempotency_key UNIQUE, created_at, updated_at
+         - BookingRoom: id, booking_id, room_type_id, rate_plan_id, 
+           date, amount, room_id (asignado al check-in)
+         - Cancellation: id, booking_id, cancelled_at, reason, 
+           cancellation_fee, refund_amount, refund_status
+      
+      4. **Entidades de Promociones**:
+         - Promotion: id, hotel_id, name, description, type (DISCOUNT, 
+           EARLY_BIRD, LAST_MINUTE, PACKAGE, NON_REFUNDABLE, LOYALTY), 
+           discount_type (PERCENTAGE, FIXED, FREE_NIGHTS), 
+           discount_value, stackable (boolean), min_margin_percent, 
+           start_date, end_date, is_active
+         - PromotionRule: id, promotion_id, rule_type (MIN_STAY, MAX_STAY, 
+           ADVANCE_BOOKING_MIN, ADVANCE_BOOKING_MAX, SPECIFIC_DATES, 
+           ROOM_TYPES, MIN_OCCUPANCY), configuration (JSONB)
+         - PromotionRedemption: id, promotion_id, booking_id, 
+           discount_applied, margin_before, margin_after
+      
+      5. **Entidades de Analytics** (TimescaleDB hypertables):
+         - OccupancyMetric: hotel_id, date, room_type_id, total_rooms, 
+           occupied_rooms, occupancy_pct. Hypertable particionado por date.
+         - RevenueMetric: hotel_id, date, channel, total_revenue, 
+           total_room_nights, adr, revpar. Hypertable por date.
+         - Forecast: hotel_id, date, predicted_occupancy, confidence_low, 
+           confidence_high, model_version. Hypertable por date.
+      
+      6. **Estrategia de Índices**:
+         - Inventory: índice compuesto (hotel_id, date) para range scans,
+           índice parcial para available_rooms > 0, BRIN index para
+           fechas históricas.
+         - Booking: índice en idempotency_key (UNIQUE), (hotel_id, 
+           checkin_date), (channel_booking_id, channel).
+         - Rate: índice (hotel_id, room_type_id, date), índice en version
+           para optimistic locking.
+         - TimescaleDB: índices automáticos en time column, continuous
+           aggregates materializadas para dashboards.
+      
+      7. **Particionamiento**: PostgreSQL declarative partitioning por
+         hotel_id (HASH) para Inventory y Rate (hot data), por date
+         (RANGE) para Booking y Analytics (cold data). TimescaleDB
+         hypertables con chunk interval de 1 día.
+      
+      8. **Migraciones**: Estrategia con Prisma o Knex.js. Migraciones
+         versionadas, forward/reversible, seed data para desarrollo.
+      
+      Output: `specs/001-b2b-hotel-platform/data-model.md` con diagrama
+      ER en texto + DDL SQL completo.
+    wave: 3
+    agent: "gem-planner"
+    status: pending
+    dependencies:
+      - "HOTEL-STACK"
+    conflicts_with: []
+    context_files:
+      - path: "specs/001-b2b-hotel-platform/stack-decision.md"
+        description: "Input: PostgreSQL versión y features disponibles"
+      - path: "specs/001-b2b-hotel-platform/research.md"
+        description: "Input: protocolos OTA y formatos de datos requeridos"
+    acceptance_criteria:
+      - "Definición completa de entidades con: nombre, atributos, tipos SQL, constraints, relaciones"
+      - "DDL SQL para todas las tablas (CREATE TABLE con column types, constraints, indexes)"
+      - "Diagrama ER en texto ASCII mostrando relaciones entre entidades principales"
+      - "Estrategia de particionamiento documentada con justificación"
+      - "Índices definidos con: columnas, tipo (BTREE, BRIN, GIN, GiST), propósito"
+      - "Estrategia de migraciones con herramienta concreta (Prisma o Knex.js)"
+      - "Consideraciones de multi-tenancy en el modelo (tenant_id, row-level security)"
+    success_criteria:
+      - "data-model.md >= 3500 palabras"
+      - "DDL SQL funcional (sintaxis PostgreSQL 16 válida)"
+      - "Cubre las 5 categorías de entidades: Core, Pricing, Booking, Promotions, Analytics"
+      - "Cada entidad tiene: justificación de negocio, atributos, constraints, relaciones"
+    handoff:
+      do_not_reinvestigate:
+        - "Modelo de datos ya diseñado con DDL completo"
+        - "Estrategia de índices y particionamiento ya definida"
+      target_files:
+        - "specs/001-b2b-hotel-platform/data-model.md"
+      minimal_change: "Modelo de datos completo para todas las entidades del sistema"
+      acceptance_checks:
+        - "data-model.md existe"
+        - "Contiene: Entity Definitions, ER Diagram, DDL SQL, Index Strategy, Partitioning, Migrations"
+        - "DDL SQL es sintácticamente correcto para PostgreSQL 16"
+        - "Cubre Inventory, Rate, Booking, Promotion, Analytics"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WAVE 4: Documentation (deps: Wave 3 architecture + data model)
+  # ═══════════════════════════════════════════════════════════════════════════
+  - id: "HOTEL-SPEC"
+    title: "Formalizar especificación funcional (spec.md) a partir de requisitos del usuario"
+    description: >
+      Crear el documento de especificación funcional formal (spec.md) que
+      consolida los requisitos proporcionados por el usuario, enriquecidos
+      con la investigación de dominio (Wave 1). El spec.md debe seguir el
+      template de Spec Kit y cubrir:
+      
+      1. **User Stories** para cada funcionalidad core (2.1-2.5):
+         - Sistema de Disponibilidad en Tiempo Real
+         - Gestión de Tarifas y Pricing Dinámico
+         - Promociones y Ofertas por Temporada
+         - APIs para Agencias y Terceros
+         - Reportes y Analítica
+         Cada user story con: As a [rol], I want [acción], So that [beneficio].
+         Al menos 3-5 user stories por funcionalidad.
+      
+      2. **Acceptance Criteria** medibles para cada user story:
+         - SLAs cuantificables (<100ms disponibilidad, <5s sync)
+         - Comportamiento esperado en edge cases (sobreventa, rate disparity,
+           multi-moneda, timezone conflicts)
+         - Non-functional: seguridad, escalabilidad, compliance
+      
+      3. **Priorización**: MoSCoW para MVP (Fase 1) vs fases posteriores.
+         Must Have: channel manager core + 4 OTAs + inventario pooled +
+         tarifas base + dashboard ocupación + auth + multi-tenancy.
+      
+      4. **Glosario de dominio**: términos hotel industry (BAR, RevPAR, ADR,
+         MLOS, CTA, Stop Sell, OTA, PMS, GDS, ARI, channel manager, etc.)
+      
+      5. **Mercado y Usuarios**: perfil de hoteles independientes LATAM,
+         sus pain points actuales, workflows manuales que la plataforma
+         automatiza.
+      
+      Output: `specs/001-b2b-hotel-platform/spec.md`
+    wave: 4
+    agent: "gem-researcher"
+    status: pending
+    dependencies:
+      - "HOTEL-ARCH-DESIGN"
+      - "HOTEL-DATA-MODEL"
+    conflicts_with: []
+    context_files:
+      - path: "specs/001-b2b-hotel-platform/research.md"
+        description: "Input: dominio hotelero, competidores, regulación"
+      - path: "specs/001-b2b-hotel-platform/architecture.md"
+        description: "Input: arquitectura que implementa las funcionalidades"
+      - path: "specs/001-b2b-hotel-platform/data-model.md"
+        description: "Input: entidades que soportan los casos de uso"
+    acceptance_criteria:
+      - "Al menos 20 user stories distribuidas en las 5 funcionalidades core"
+      - "Cada user story tiene acceptance criteria medible (número, porcentaje, tiempo)"
+      - "Priorización MoSCoW completa para MVP (Fase 1)"
+      - "Glosario de al menos 30 términos de dominio hotelero"
+      - "Non-functional requirements documentados: performance, security, scalability, compliance"
+      - "User personas: al menos 3 (hotelero independiente, revenue manager, agencia de viajes)"
+    success_criteria:
+      - "spec.md >= 4000 palabras"
+      - "User stories siguen formato estándar con rol, acción, beneficio"
+      - "Acceptance criteria son verificables (no ambiguos, no subjetivos)"
+      - "Edge cases documentados para cada funcionalidad"
+    recommended_skills: ["find-docs"]
+    handoff:
+      do_not_reinvestigate:
+        - "Requisitos funcionales ya formalizados en spec.md"
+        - "User stories y acceptance criteria ya definidos"
+      target_files:
+        - "specs/001-b2b-hotel-platform/spec.md"
+      minimal_change: "Documento completo de especificación funcional"
+      acceptance_checks:
+        - "spec.md existe en specs/001-b2b-hotel-platform/"
+        - "Cubre las 5 funcionalidades core (2.1-2.5)"
+        - "Incluye MoSCoW prioritization"
+        - "Incluye glossary de dominio"
+        - "User stories tienen acceptance criteria verificables"
+
+  - id: "HOTEL-DOC-PLAN"
+    title: "Generar plan técnico integral (plan.md) — roadmap, fases, equipo, presupuesto"
+    description: >
+      Crear el plan técnico maestro (plan.md) que integra toda la investigación
+      y diseño previo en un documento ejecutivo. Debe cubrir:
+      
+      1. **Roadmap de Fases** con milestones medibles:
+         - Fase 1 (Meses 1-6): MVP
+           * M1 (Mes 2): Core data model + API interna de disponibilidad
+           * M2 (Mes 3): Channel manager básico con pooled inventory + Redis cache
+           * M3 (Mes 4): Integración con 2 OTAs (Booking.com, Expedia)
+           * M4 (Mes 5): Dashboard básico (ocupación, ADR, RevPAR) + 2 OTAs más
+           * M5 (Mes 6): Auth multi-tenant + onboarding self-service + MVP launch
+         - Fase 2 (Meses 7-12): Pricing & Analytics
+           * M6 (Mes 9): Dynamic pricing engine v1 + rate plans avanzados
+           * M7 (Mes 11): Forecasting 30/60/90 días + rate parity detection
+           * M8 (Mes 12): +3 OTAs + reporting avanzado (CSV, PDF, BI)
+         - Fase 3 (Meses 13-18): Platform
+           * M9 (Mes 15): APIs públicas con OAuth2 + sandbox + documentación
+           * M10 (Mes 17): Revenue management AI/ML + multi-propiedad
+           * M11 (Mes 18): PMS integrations (Cloudbeds, Mews, 2 locales)
+         - Fase 4 (Meses 19-24): Scale
+           * M12 (Mes 21): GDS (Amadeus, Sabre) + metasearch (Google, Tripadvisor)
+           * M13 (Mes 23): Multi-región AWS (DR activo en sa-east-1)
+           * M14 (Mes 24): White-label + partner program
+      
+      2. **Equipo y Presupuesto por Fase**:
+         - Fase 1 (6 meses): 8 personas — $360K-480K USD
+           * 2 Backend Senior ($60-80K/año c/u LATAM)
+           * 2 Frontend Senior ($50-70K/año c/u)
+           * 1 DevOps ($60-80K/año)
+           * 1 QA Automation ($40-50K/año)
+           * 1 Product Manager ($50-70K/año)
+           * 1 UI/UX Designer ($40-50K/año)
+           * Infraestructura: $3-5K/mes (AWS)
+           * Herramientas SaaS: $1-2K/mes
+         - Fase 2 (6 meses): 12-15 personas — $450K-600K USD
+           * +2 Backend, +1 Data Engineer, +1 QA, +1 Support
+         - Fase 3 (6 meses): 18-22 personas — $600K-800K USD
+           * +2 Backend (integraciones), +1 ML Engineer, +2 Frontend, +1 Tech Writer
+         - Fase 4 (6 meses): 25-30 personas — $750K-1M USD
+           * +Sales Engineers, +Customer Success, +SREs
+         - Total 24 meses: $2.1M-2.9M USD
+      
+      3. **Estrategia de Integraciones Técnicas** (detallada en sección 4):
+         - OTAs: prioridad y orden (Booking.com → Expedia → Despegar → Airbnb),
+           proceso de certificación, timeline estimado, protocolos
+         - PMS: estrategia de conectores (adapter pattern), PMS a priorizar,
+           protocolos (HTNG, REST), approach para sistemas legacy sin API
+         - Payment Gateways: Stripe (internacional) + MercadoPago (LATAM),
+           integración de suscripciones + cobro por reserva
+         - GDS: Amadeus Web Services, Sabre APIs, requisitos de certificación
+         - Metasearch: Google Hotel Center + Hotel Ads API, Tripadvisor Connect
+      
+      4. **Estrategia de Go-to-Market**:
+         - Beta cerrada: 10-15 hoteles en Cancún/Riviera Maya (alta densidad)
+         - Early adopter pricing: 50% descuento primer año
+         - Adquisición: partnerships con asociaciones hoteleras MX/CO
+         - Onboarding: migración de datos desde Excel/Google Sheets del hotelero
+      
+      Output: `specs/001-b2b-hotel-platform/plan.md`
+    wave: 4
+    agent: "gem-planner"
+    status: pending
+    dependencies:
+      - "HOTEL-ARCH-DESIGN"
+      - "HOTEL-DATA-MODEL"
+    conflicts_with: []
+    context_files:
+      - path: "specs/001-b2b-hotel-platform/stack-decision.md"
+        description: "Input: stack y costos de herramientas"
+      - path: "specs/001-b2b-hotel-platform/architecture.md"
+        description: "Input: arquitectura para estimar esfuerzo de features"
+      - path: "specs/001-b2b-hotel-platform/data-model.md"
+        description: "Input: modelo de datos para estimar complejidad"
+      - path: "specs/001-b2b-hotel-platform/research.md"
+        description: "Input: integraciones OTA/PMS y procesos de certificación"
+      - path: "specs/001-b2b-hotel-platform/infrastructure-research.md"
+        description: "Input: costos de infraestructura cloud"
+    acceptance_criteria:
+      - "4 fases de roadmap con 14 milestones totales, cada uno con criterio de completitud medible"
+      - "Estimaciones de equipo: roles, headcount, rango salarial LATAM, total por fase"
+      - "Presupuesto desglosado: personal + infraestructura + herramientas SaaS + otros"
+      - "Estrategia de integraciones: 6+ OTA/PMS con timeline de certificación"
+      - "Go-to-market strategy con beta cerrada y early adopter pricing"
+      - "Risk register con los top 10 riesgos, probabilidad, impacto, mitigación"
+    success_criteria:
+      - "plan.md >= 5000 palabras"
+      - "Estimaciones de presupuesto basadas en rangos salariales reales LATAM 2026"
+      - "Milestones tienen fechas concretas y criterios de done verificables"
+      - "Estrategia de integraciones incluye: protocolo, timeline, prerequisites"
+    handoff:
+      do_not_reinvestigate:
+        - "Roadmap de fases ya definido con milestones"
+        - "Estimaciones de equipo y presupuesto ya calculadas"
+        - "Estrategia de integraciones ya detallada"
+      target_files:
+        - "specs/001-b2b-hotel-platform/plan.md"
+      minimal_change: "Documento maestro del plan técnico"
+      acceptance_checks:
+        - "plan.md existe en specs/001-b2b-hotel-platform/"
+        - "Cubre: Roadmap (4 fases), Equipo y Presupuesto, Integraciones, Go-to-Market"
+        - "Estimaciones de presupuesto con desglose detallado"
+        - "Milestones con criterios de done medibles"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WAVE 5: Review & Validation (deps: Wave 4)
+  # ═══════════════════════════════════════════════════════════════════════════
+  - id: "HOTEL-REVIEW"
+    title: "Review integral de todos los documentos — consistencia, completitud, viabilidad"
+    description: >
+      Revisión cruzada de todos los documentos generados para garantizar
+      consistencia, completitud y viabilidad técnica:
+      
+      1. **Consistencia cruzada**: verificar que spec.md, plan.md, data-model.md,
+         y architecture.md son coherentes entre sí. El modelo de datos debe
+         soportar todas las user stories. La arquitectura debe implementar
+         todos los acceptance criteria. El plan debe reflejar fielmente
+         la complejidad revelada en la arquitectura.
+      
+      2. **Viabilidad técnica**: evaluar si los SLAs (<100ms, <5s) son
+         alcanzables con la arquitectura propuesta. Verificar que las
+         integraciones OTA tienen caminos viables (APIs documentadas,
+         programas de partner accesibles). Validar que los costos de
+         infraestructura son realistas para el presupuesto.
+      
+      3. **Completitud**: verificar que todos los requisitos del usuario
+         están cubiertos. Identificar gaps y funcionalidades implícitas
+         no documentadas (ej: manejo de timezones, reconciliación de
+         reservas, facturación del SaaS).
+      
+      4. **Riesgos no mitigados**: revisar que el pre_mortem cubre los
+         riesgos principales. Identificar riesgos adicionales no
+         considerados.
+      
+      5. **Recomendaciones**: mejoras, simplificaciones, ajustes de scope
+         para el MVP. Sugerir cortes de features si el MVP scope es
+         demasiado ambicioso para 6 meses.
+      
+      Output: `specs/001-b2b-hotel-platform/review.md` con hallazgos,
+      issues clasificados por severidad, y recomendaciones accionables.
+    wave: 5
+    agent: "gem-reviewer"
+    status: pending
+    dependencies:
+      - "HOTEL-SPEC"
+      - "HOTEL-DOC-PLAN"
+    conflicts_with: []
+    review_depth: full
+    review_security_sensitive: true
+    requires_review: true
+    context_files:
+      - path: "specs/001-b2b-hotel-platform/spec.md"
+        description: "Input: especificación funcional"
+      - path: "specs/001-b2b-hotel-platform/plan.md"
+        description: "Input: plan técnico maestro"
+      - path: "specs/001-b2b-hotel-platform/architecture.md"
+        description: "Input: arquitectura del sistema"
+      - path: "specs/001-b2b-hotel-platform/data-model.md"
+        description: "Input: modelo de datos"
+      - path: "specs/001-b2b-hotel-platform/stack-decision.md"
+        description: "Input: stack tecnológico"
+      - path: "specs/001-b2b-hotel-platform/research.md"
+        description: "Input: investigación de dominio"
+      - path: "specs/001-b2b-hotel-platform/architecture-patterns.md"
+        description: "Input: patrones arquitectónicos"
+      - path: "specs/001-b2b-hotel-platform/infrastructure-research.md"
+        description: "Input: investigación de infraestructura"
+    acceptance_criteria:
+      - "Todos los documentos revisados con hallazgos documentados"
+      - "Issues de consistencia identificados con severidad (critical, high, medium, low)"
+      - "Análisis de viabilidad de SLAs con justificación técnica"
+      - "Gaps funcionales identificados con recomendaciones"
+      - "Evaluación de scope MVP: ¿realista en 6 meses con 8 personas?"
+      - "Risk assessment actualizado con nuevos riesgos identificados"
+      - "Recomendaciones accionables y priorizadas"
+    success_criteria:
+      - "review.md >= 2000 palabras"
+      - "Al menos 5 hallazgos de consistencia/viabilidad documentados"
+      - "Cada issue tiene: severidad, documentos afectados, recomendación"
+      - "Conclusión: APPROVED / APPROVED_WITH_RECOMMENDATIONS / NEEDS_REVISION"
+    handoff:
+      do_not_reinvestigate:
+        - "Todos los documentos ya revisados"
+        - "Hallazgos de consistencia ya documentados"
+      target_files:
+        - "specs/001-b2b-hotel-platform/review.md"
+      minimal_change: "Review integral con hallazgos y recomendaciones"
+      acceptance_checks:
+        - "review.md existe"
+        - "Cubre: Cross-document Consistency, Technical Viability, Completeness, Risks, Recommendations"
+        - "Issues clasificados por severidad"
+        - "Conclusión final clara"

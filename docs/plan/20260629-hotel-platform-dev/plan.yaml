@@ -1,0 +1,2069 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# PLAN: Desarrollo Definitivo — Plataforma B2B Hotelera
+# ═══════════════════════════════════════════════════════════════════════════
+plan_id: "20260629-hotel-platform-dev"
+objective: >
+  Plan de desarrollo completo para plataforma B2B SaaS de gestión de disponibilidad hotelera
+  (Channel Manager + Revenue Management) para hoteles independientes en Colombia.
+  Stack: Node.js/NestJS/TypeScript + React/Next.js/Tailwind + PostgreSQL/Redis.
+  MVP en Fly.io + Neon + Upstash ($0-2/mes). Incluye todas las correcciones arquitectónicas,
+  testing continuo, seguridad, operaciones y onboarding beta.
+created_at: "2026-06-29T10:55:00Z"
+created_by: "gem-planner"
+status: pending
+  tldr: >
+  Plan de 8 waves (0-7) con 41 tareas para construir la plataforma completa. Wave 0 corrige
+  overengineering (BullMQ reemplaza Kafka, RLS reemplaza database-per-tenant, NestJS middleware
+  reemplaza Kong). Waves 1-5 construyen fundación, core MVP, OTAs, experiencia hotelero y
+  plataforma. Wave 6 es testing continuo (Jest, Supertest, k6, mock OTA). Wave 7 es beta
+  presencial en Tolú/Coveñas. WhatsApp vía OpenWA (self-hosted, $0) con adapter pattern para
+  migrar a API oficial cuando haya flujo de caja. Backlog post-MVP para Fase 2-3.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PLAN METRICS
+# ═══════════════════════════════════════════════════════════════════════════
+plan_metrics:
+  wave_1_task_count: 3
+  total_dependencies: 67
+  risk_score: high
+
+quality_warnings:
+  - "La certificación OTA (Booking.com, Despegar) puede tomar 3-6 meses. Iniciar procesos administrativos Día 1 en Wave 3, paralelo al desarrollo técnico."
+  - "WhatsApp Business API requiere aprobación de Meta (24h-2sem). Iniciar registro en Wave 1 para tener API key en Wave 4."
+  - "Fly.io 256MB RAM limita procesos concurrentes. BullMQ worker debe ejecutarse como proceso separado con recursos dedicados."
+  - "Neon 0.5GB free tiene límite de conexiones. Implementar connection pooling con PgBouncer desde Wave 1."
+  - "Onboarding de Don José (58 años, baja tecnología) requiere diseño UX extremadamente simple y acompañamiento presencial en beta."
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PLANNING ANALYSIS (HIGH complexity)
+# ═══════════════════════════════════════════════════════════════════════════
+open_questions:
+  - question: "¿Qué proveedor de facturación electrónica (Xubio, Siigo, Alegra) tiene mejor API para integración B2B SaaS?"
+    context: "La DIAN exige facturación electrónica en Colombia. Integrar con proveedor de API. Evaluar: documentación, sandbox, costos, soporte para suscripciones recurrentes."
+    type: decision_blocker
+    affects: ["PLAT-03", "PLAT-04"]
+  - question: "¿Se necesita registro INVIMA o alguna certificación adicional para operar como plataforma hotelera en Colombia?"
+    context: "Verificar requisitos regulatorios específicos para plataformas de intermediación hotelera en Colombia, más allá de facturación electrónica."
+    type: decision_blocker
+    affects: ["PLAT-04"]
+  - question: "¿Cuál es el tiempo real de aprobación de WhatsApp Business API para una startup colombiana sin historial?"
+    context: "Meta tiene procesos de revisión. Si toma >2 semanas, ajustar timeline de WhatsApp en Wave 4."
+    type: research
+    affects: ["EXP-06"]
+
+assumptions:
+  - "Fly.io, Neon y Upstash mantendrán sus tier free durante los primeros 12 meses del proyecto"
+  - "Booking.com Connectivity Program aceptará a una startup colombiana sin hoteles conectados (probar con plan piloto de 10 hoteles)"
+  - "Los hoteleros beta aceptarán usar PWA en sus celulares Android sin necesidad de instalar app nativa"
+  - "La conectividad 4G en Tolú y Coveñas es suficiente para sincronización offline-online <30s"
+  - "Los hoteles beta tienen al menos un smartphone Android en recepción para operar la plataforma"
+  - "La transición de Founders (6 meses full → plan pago) tendrá 30 días de gracia con notificación a los 5 meses"
+
+pre_mortem:
+  overall_risk_level: high
+  critical_failure_modes:
+    - scenario: "Certificación Booking.com toma >6 meses, bloqueando integración OTA principal"
+      likelihood: medium
+      impact: critical
+      mitigation: "Flujo puente (WhatsApp + Demand API + CSV) funciona desde MVP sin certificación. El hotelero no nota la diferencia. Push automático reemplaza flujo manual cuando llegue certificación."
+    - scenario: "BullMQ con Redis en Upstash 10MB free es insuficiente para colas de sincronización OTA"
+      likelihood: medium
+      impact: high
+      mitigation: "Mantener colas pequeñas (TTL corto, máx 100 mensajes en cola). Si escala, migrar a Upstash Pro ($5/mes) o Redis propia en Fly.io."
+    - scenario: "Hoteleros beta no adoptan la plataforma por complejidad tecnológica"
+      likelihood: medium
+      impact: critical
+      mitigation: "Onboarding presencial obligatorio. UI ultra-simple (3 botones principales). WhatsApp como interfaz primaria. Don José no toca el celular del recepcionista."
+    - scenario: "Neon free tier (0.5GB) se queda sin storage con datos de 10 hoteles en 3 meses"
+      likelihood: medium
+      impact: high
+      mitigation: "Monitorear crecimiento. Migrar a Neon Scale ($19/mes) o Render PostgreSQL ($7/mes) cuando supere 300MB. Script de migración preparado desde Día 1."
+    - scenario: "Fly.io no permite NestJS + BullMQ worker en una sola VM 256MB (OOM)"
+      likelihood: high
+      impact: high
+      mitigation: "Separar API y worker en dos procesos Fly.io (2x256MB). Usar solo 1 VM si crédito es limitado, con worker como child process limitado a 128MB."
+    - scenario: "Rate limiting de WhatsApp Business API (1000 mensajes/día en tier free) insuficiente para notificaciones"
+      likelihood: medium
+      impact: medium
+      mitigation: "Priorizar solo notificaciones críticas (reservas, alertas overbooking). Diferir campañas marketing a Fase 2 cuando se pueda pagar tier superior."
+    - scenario: "Pérdida de datos de inventario por falta de WAL archiving en Neon free tier"
+      likelihood: low
+      impact: critical
+      mitigation: "pg_dump diario a Fly.io storage (5GB gratis). WAL archiving si Neon lo permite en free. RTO >30min pero RPO <24h. Aceptable para MVP."
+
+coordination_notes:
+  - "Wave 0 debe completarse ANTES de cualquier desarrollo. Las correcciones arquitectónicas afectan todas las decisiones de implementación."
+  - "Wave 3 (OTAs) corre paralela a Wave 2 (Core MVP). La certificación OTA es proceso administrativo externo que comienza Día 1."
+  - "Wave 6 (Testing) corre en paralelo a Waves 1-5. Cada tarea de implementación produce tests en la misma wave."
+  - "Wave 7 (Beta) requiere que Waves 2-5 estén completas. Founders deben tener todo operativo 2 semanas antes del inicio beta."
+  - "WhatsApp Business API registration debe iniciarse en Wave 1 (proceso Meta de 1-14 días) para tener API key disponible en Wave 4."
+  - "Booking.com y Despegar partnerships deben iniciarse en Wave 3 Día 1, sin esperar código. Son procesos administrativos externos."
+
+contracts:
+  - from_task: "CORR-01"
+    to_task: "FND-01"
+    interface: "Arquitectura colas definitiva (BullMQ)"
+    format: "Especificación: colas, workers, patrones de reintento, DLQ config"
+  - from_task: "CORR-02"
+    to_task: "FND-04"
+    interface: "Esquema RLS + policy SQL"
+    format: "DDL de políticas RLS por tabla, función set_tenant_context()"
+  - from_task: "CORR-02"
+    to_task: "CORE-01"
+    interface: "Modelo datos con tenant_id"
+    format: "Entidades con tenant_id UUID NOT NULL, políticas RLS"
+  - from_task: "FND-03"
+    to_task: "CORE-03"
+    interface: "Secrets API keys"
+    format: "Variables de entorno en Fly.io + secrets.json cifrado"
+  - from_task: "FND-04"
+    to_task: "CORE-01"
+    interface: "Middleware auth + JWT"
+    format: "NestJS AuthGuard, @CurrentUser() decorator, JWT payload schema"
+  - from_task: "CORE-01"
+    to_task: "OTA-03"
+    interface: "Modelo inventario para sync OTA"
+    format: "Inventory view con available_rooms, version, updated_at"
+  - from_task: "CORE-01"
+    to_task: "EXP-02"
+    interface: "Modelo datos dashboard"
+    format: "Vistas materializadas para occupancy, ADR, RevPAR"
+  - from_task: "CORE-02"
+    to_task: "EXP-05"
+    interface: "Redis cache layer"
+    format: "Cache keys, TTLs, invalidation patterns documentados"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TASKS
+# ═══════════════════════════════════════════════════════════════════════════
+
+tasks:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WAVE 0: CORRECCIONES ARQUITECTÓNICAS (pre-desarrollo)
+  # Semanas 0-1: Corregir stack antes de codificar
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: "CORR-01"
+    title: "BullMQ reemplaza Kafka + RabbitMQ + Debezium"
+    description: >
+      ELIMINAR Kafka, RabbitMQ y Debezium del stack MVP. Reemplazar con BullMQ
+      (colas basadas en Redis) para tareas asíncronas. Documentar:
+      1. Arquitectura de colas: cola por tipo de tarea (ota-sync, notifications,
+         reconciliation, webhooks, reports). Cada cola con su worker dedicado.
+      2. BullMQ configuración: conexión Upstash Redis, default job options
+         (attempts=3, backoff=exponential, removeOnComplete=100),
+         rate limiting por cola (ota-sync: 10 jobs/min por OTA).
+      3. Patrón de reintentos: retry con backoff exponencial (1min, 5min, 15min),
+         DLQ después de 3 intentos fallidos, alerta en DLQ > 5 mensajes.
+      4. Diferir Kafka a Fase 3 (>200 hoteles). Documentar trigger de migración.
+      5. Jobs programados: usar @nestjs/schedule + BullMQ repeatable jobs
+         (reconciliation cada 5 min, backup diario, reportes semanales).
+      Output: `docs/plan/20260629-hotel-platform-dev/decisions/bullmq-architecture.md`
+    wave: 0
+    agent: "gem-planner"
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    acceptance_criteria:
+      - "Kafka + RabbitMQ + Debezium eliminados del stack MVP documentado"
+      - "BullMQ configurado con: colas definidas, job options, rate limiting, DLQ"
+      - "Migración planificada a Kafka en Fase 3 con trigger numérico (>200 hoteles)"
+      - "Jobs programados identificados: reconciliation (5min), backup (24h), reportes (7d)"
+    success_criteria:
+      - "Arquitectura de colas cabe en Upstash Redis 10MB free"
+      - "Documento describe reintentos, DLQ, rate limiting y migración futura"
+    handoff:
+      do_not_reinvestigate:
+        - "BullMQ reemplaza Kafka: decisión tomada"
+        - "Colas definidas: ota-sync, notifications, reconciliation, webhooks, reports"
+        - "Trigger migración Kafka: >200 hoteles conectados"
+      target_files:
+        - "docs/plan/20260629-hotel-platform-dev/decisions/bullmq-architecture.md"
+      acceptance_checks:
+        - "Documento existe en decisions/"
+        - "Cubre: colas, job options, rate limiting, DLQ, migración futura"
+
+  - id: "CORR-02"
+    title: "Row-Level Security (RLS) reemplaza database-per-tenant"
+    description: >
+      ELIMINAR database-per-tenant para MVP. Implementar multi-tenancy con
+      RLS en PostgreSQL. Un solo schema con tenant_id column en todas las tablas.
+      Documentar y preparar:
+      1. Estrategia: tenant_id UUID NOT NULL en toda tabla multi-tenant (hotel_id).
+         Usar PostgreSQL Row-Level Security con policy por tenant_id.
+      2. Función set_tenant_context(): set_config('app.tenant_id', id, true) llamada
+         al inicio de cada request después de autenticar al usuario.
+      3. Políticas RLS: CREATE POLICY tenant_isolation ON inventory
+         USING (hotel_id = current_setting('app.tenant_id')::UUID).
+      4. Connection pooling: PgBouncer o Neon built-in pooler.
+      5. Migración futura: script para extraer tenant a DB separada cuando
+         >500 hoteles o cliente Enterprise lo exija.
+      6. Índices: índice compuesto (hotel_id, date) en todas tablas multi-tenant.
+      Output: `docs/plan/20260629-hotel-platform-dev/decisions/rls-multitenancy.md`
+    wave: 0
+    agent: "gem-planner"
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    acceptance_criteria:
+      - "Database-per-tenant eliminado para MVP"
+      - "Estrategia RLS documentada con policies SQL de ejemplo"
+      - "Función set_tenant_context() definida"
+      - "Plan de migración a database-per-tenant documentado (>500 hoteles)"
+      - "Índices compuestos (tenant_id, date) especificados para tablas core"
+    success_criteria:
+      - "Un solo schema PostgreSQL para todos los tenants"
+      - "Aislamiento de datos garantizado por RLS + tenant_id en queries"
+      - "Migración futura scripteable con pg_dump --schema-only por tenant"
+    handoff:
+      do_not_reinvestigate:
+        - "RLS reemplaza database-per-tenant: decisión tomada"
+        - "tenant_id = hotel_id UUID NOT NULL en tablas multi-tenant"
+        - "Políticas RLS: tenant_isolation en todas tablas con tenant_id"
+      target_files:
+        - "docs/plan/20260629-hotel-platform-dev/decisions/rls-multitenancy.md"
+      acceptance_checks:
+        - "Documento existe en decisions/"
+        - "Cubre: estrategia RLS, policies SQL, set_tenant_context(), migración futura"
+
+  - id: "CORR-03"
+    title: "NestJS middleware reemplaza Kong API Gateway"
+    description: >
+      ELIMINAR Kong del stack MVP. Usar middleware nativo de NestJS:
+      1. Rate limiting: @nestjs/throttler + express-rate-limit configurado por
+         endpoint y por tenant (usa Redis store con Upstash).
+         Free tier: 100 req/min por tenant. Paid: 1000 req/min.
+      2. Guards de auth: NestJS @UseGuards(JwtAuthGuard, RolesGuard) con
+         roles por plan (free, micro, starter, growth, pro, founders).
+      3. Request validation: class-validator + class-transformer con
+         ValidationPipe global.
+      4. Logging: interceptors para request/response logging con correlation ID.
+      5. Compresión: compression middleware para respuestas JSON grandes.
+      Output: `docs/plan/20260629-hotel-platform-dev/decisions/nestjs-middleware.md`
+    wave: 0
+    agent: "gem-planner"
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    acceptance_criteria:
+      - "Kong eliminado del stack MVP"
+      - "Rate limiting por tenant definido: 100 req/min free, 1000 req/min paid"
+      - "Auth guards: JwtAuthGuard con roles por plan"
+      - "ValidationPipe global con class-validator"
+      - "Middleware de logging con correlation IDs"
+    success_criteria:
+      - "Middleware cabe en NestJS sin dependencias externas de gateway"
+      - "Rate limiting usa Redis store para consistencia multi-instancia"
+    handoff:
+      do_not_reinvestigate:
+        - "Kong eliminado: decisión tomada"
+        - "NestJS middleware: throttler, guards, validation, logging, compression"
+        - "Redis como store de rate limiting compartido"
+      target_files:
+        - "docs/plan/20260629-hotel-platform-dev/decisions/nestjs-middleware.md"
+      acceptance_checks:
+        - "Documento existe en decisions/"
+        - "Cubre: rate limiting, auth guards, validation, logging, compression"
+
+  - id: "CORR-04"
+    title: "Redefinir arquitectura como Modular Monolith"
+    description: >
+      Mover diagrama de arquitectura de microservicios a Modular Monolith real.
+      NestJS modules con bounded contexts claros pero en el mismo proceso:
+      1. Módulos NestJS: AvailabilityModule, RateModule, BookingModule,
+         ChannelSyncModule, PromotionModule, AnalyticsModule, AuthModule,
+         NotificationModule, AdminModule.
+      2. Cada módulo con: controlador (si expone API), servicio, DTOs,
+         entidades (TypeORM o Prisma), repositorio, eventos que publica/consume.
+      3. Comunicación inter-módulo: directa vía servicios (no HTTP ni mensajería).
+         Solo sincronización OTA externa usa BullMQ.
+      4. Límites: cada módulo tiene su propio schema PostgreSQL (mismo DB,
+         schemas separados: availability, rates, bookings, channels, etc.).
+      5. Migración a microservicios: extraer módulo completo (controlador +
+         servicio + schema DB) a servicio independiente. Trigger: cuando
+         el equipo tenga 3+ desarrolladores por módulo o cuando métricas
+         de acoplamiento justifiquen separación.
+      Output: `docs/plan/20260629-hotel-platform-dev/decisions/modular-monolith.md`
+    wave: 0
+    agent: "gem-planner"
+    status: pending
+    dependencies: ["CORR-01"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    acceptance_criteria:
+      - "9 módulos NestJS definidos con boundaries claros"
+      - "Cada módulo tiene: responsabilidad, eventos, dependencias inter-modulo"
+      - "Comunicación inter-módulo: directa vía servicios (sin HTTP ni colas internas)"
+      - "Trigger migración microservicios documentado"
+      - "Schemas PostgreSQL separados por módulo"
+    success_criteria:
+      - "Arquitectura despliega en Fly.io 256MB (1 proceso NestJS)"
+      - "Extraer módulo a microservicio = copiar carpeta + exponer API HTTP"
+    handoff:
+      do_not_reinvestigate:
+        - "9 módulos definidos con schemas separados"
+        - "Comunicación directa entre módulos (no colas internas)"
+        - "Trigger migración microservicios documentado"
+      target_files:
+        - "docs/plan/20260629-hotel-platform-dev/decisions/modular-monolith.md"
+      acceptance_checks:
+        - "Documento existe en decisions/"
+        - "Lista los 9 módulos con responsabilidades y dependencias"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WAVE 1: FUNDACIÓN (Semanas 1-3)
+  # Dependencias: CORR-01, CORR-02, CORR-03, CORR-04
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: "FND-01"
+    title: "Setup infraestructura MVP: Fly.io + Neon + Upstash + Cloudflare"
+    description: >
+      Configurar toda la infraestructura base del proyecto:
+      1. Registrar Fly.io, Neon, Upstash, Cloudflare. Obtener créditos.
+      2. fly.toml: configurar app NestJS + Next.js. VM 256MB shared CPU.
+         Configurar para que NO duerma (fly.toml: auto_start_machines = true,
+         auto_stop_machines = false). Volumen para backups: 5GB.
+         Variables de entorno: DATABASE_URL, REDIS_URL, NODE_ENV, etc.
+      3. Neon: crear proyecto, obtener DATABASE_URL. Configurar pool de
+         conexiones integrado. Database inicial con schemas por módulo.
+      4. Upstash: crear DB Redis, obtener REDIS_URL. Configurar TTL
+         global default.
+      5. Cloudflare: DNS (CNAME a fly.io), CDN para assets estáticos,
+         DDoS protection, SSL/TLS.
+      6. GitHub repository: estructura monorepo (apps/api, apps/web, packages/).
+         Branch protection en main.
+      Output: Infraestructura operativa. README con conexiones.
+    wave: 1
+    agent: "gem-devops"
+    status: pending
+    dependencies: ["CORR-01", "CORR-02", "CORR-03", "CORR-04"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    acceptance_criteria:
+      - "Fly.io app responde a health check HTTP 200 en <5s"
+      - "Neon database acepta conexiones desde Fly.io (SSH tunnel para dev local)"
+      - "Upstash Redis conecta vía REST + TLS desde Fly.io"
+      - "Cloudflare DNS resuelve dominio -> Fly.io con SSL válido"
+      - "GitHub repo con monorepo structure, branch protection, codespace config"
+      - "Variables de entorno configuradas en Fly.io secrets"
+    success_criteria:
+      - "curl https://api.hotelplatform.com/health -> HTTP 200 OK"
+      - "npm run dev funciona local conectado a Neon + Upstash"
+    handoff:
+      do_not_reinvestigate:
+        - "Infraestructura base operativa: Fly.io, Neon, Upstash, Cloudflare"
+        - "Variables de entorno en Fly.io secrets"
+        - "Monorepo structure establecida"
+      target_files:
+        - "fly.toml"
+        - ".env.example"
+        - "README.md"
+      acceptance_checks:
+        - "fly.toml existe con config: VM, env vars, volumes"
+        - ".env.example con todas las variables requeridas"
+
+  - id: "FND-02"
+    title: "CI/CD: GitHub Actions + Deploy automático a Fly.io"
+    description: >
+      Configurar pipelines de CI/CD:
+      1. CI: lint (ESLint + Prettier), type-check (tsc --noEmit), test (jest),
+         build (nest build + next build). Triggers: push a main, PR.
+      2. CD: deploy a Fly.io en push a main. Usar flyctl deploy con
+         --build-only en CI y --ha=false para MVP (una instancia).
+      3. Ambientes: dev (auto-deploy main -> fly.io), staging (manual approve
+         desde branch), prod (fly.io production, manual approve después de
+         staging). Para MVP usar solo dev + prod.
+      4. Quality gates: lint+typecheck+tests pasan antes de deploy.
+         Coverage report en PR comment.
+      5. Dockerfile multi-stage: stage 1 build NestJS, stage 2 run with
+         node:22-alpine. Optimizado para capas pequeñas.
+      Output: Pipelines operativos. Dockerfile. README deploy.
+    wave: 1
+    agent: "gem-devops"
+    status: pending
+    dependencies: ["FND-01"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    acceptance_criteria:
+      - "CI pasa lint + type-check + test + build en <5 min"
+      - "CD deploy a Fly.io desde push a main en <3 min"
+      - "Dockerfile produce imagen <200MB (multi-stage Alpine)"
+      - "Quality gates: tests fallan -> no deploy"
+      - "Commit status reports en PR (lint, test, build)"
+    success_criteria:
+      - "Push a main -> automatic deploy -> curl health OK en <5 min"
+      - "PR con tests fallando muestra status failure"
+    handoff:
+      do_not_reinvestigate:
+        - "CI/CD pipelines operativos"
+        - "Dockerfile multi-stage optimizado"
+        - "Calidad: lint + type-check + tests antes de deploy"
+      target_files:
+        - ".github/workflows/ci.yml"
+        - ".github/workflows/deploy.yml"
+        - "Dockerfile"
+        - ".dockerignore"
+      acceptance_checks:
+        - "workflows/ci.yml existe con lint, typecheck, test, build steps"
+        - "Dockerfile multi-stage (build + run)"
+
+  - id: "FND-03"
+    title: "Secrets Management + Logging + Backup strategy"
+    description: >
+      Configurar gestión de secretos, logging estructurado y backup:
+      1. Secrets Management: API keys de OTAs, WhatsApp, email service en
+         Fly.io secrets (fly secrets set). Para desarrollo local: .env.local
+         cifrado con git-crypt o sops. Rotación manual cada 90 días.
+         NO almacenar secrets en GitHub.
+      2. Logging estructurado: NestJS Logger con format JSON (usando
+         pino-logger o nestjs-pino). Correlation ID en cada request
+         (generado en middleware, propagado a colas BullMQ). Log levels:
+         error, warn, info, debug. Estructura: {correlationId, timestamp,
+         service, level, message, tenantId, requestId, ...metadata}.
+         Logs en stdout (Fly.io los captura). Retención: 30 días gratis,
+         90 días cuando pagado.
+      3. Backup: pg_dump diario a volumen Fly.io (5GB). Script en
+         BullMQ job schedule (every 24h). Archivo: backup_YYYYMMDD.sql.gz.
+         WAL archiving si disponible en Neon. Restore script: pg_restore
+         con validación de integridad. RPO: <24h (diario). RTO: <30 min
+         (restore desde último backup). Probar restore semanalmente.
+      4. Monitoring: health endpoint (/health) con checks: DB, Redis, colas.
+         Uptime monitoring con Fly.io dashboard + ping (healthchecks.io
+         gratis para MVP).
+      Output: Scripts y configuración de secretos, logging, backup.
+    wave: 1
+    agent: "gem-devops"
+    status: pending
+    dependencies: ["FND-01"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    acceptance_criteria:
+      - "Secrets en Fly.io secrets (no en GitHub, no en .env en repo)"
+      - "Logging JSON con correlation ID en cada request"
+      - "Backup diario automático a volumen Fly.io (script + schedule)"
+      - "Restore script documentado y probado"
+      - "Health endpoint: HTTP 200 con DB + Redis + colas status"
+    success_criteria:
+      - "fly secrets list muestra API keys sin valores expuestos"
+      - "logs muestran formato JSON parseable"
+      - "backup_$(date +%Y%m%d).sql.gz existe después de 24h"
+    handoff:
+      do_not_reinvestigate:
+        - "Secrets: Fly.io secrets + .env.local cifrado local"
+        - "Logging: nestjs-pino + correlation ID"
+        - "Backup: pg_dump diario con restore script probado"
+      target_files:
+        - "scripts/backup.sh"
+        - "scripts/restore.sh"
+        - "src/common/logger/logger.module.ts"
+      acceptance_checks:
+        - "scripts/backup.sh existe y es ejecutable"
+        - "scripts/restore.sh existe y documenta pasos"
+
+  - id: "FND-04"
+    title: "Auth básico: login, registro, JWT, roles por plan"
+    description: >
+      Implementar sistema de autenticación completo:
+      1. Registro: POST /auth/register con email, password, nombre hotel,
+         nombre usuario. Validación con class-validator. Hash de password
+         con bcrypt (cost=12).
+      2. Login: POST /auth/login con email+password -> JWT access token
+         (15 min) + refresh token (7 días, httpOnly cookie o body).
+      3. JWT: payload {sub: userId, email, hotelId, role, plan}.
+         Firma con RS256 (par de llaves generado).
+      4. Roles: admin (dueño hotel), staff (empleado), super_admin (sistema).
+         Por plan: free, micro, starter, growth, pro, founders.
+      5. Guards: JwtAuthGuard (valida token), RolesGuard (valida rol),
+         PlanGuard (valida plan tiene feature). Ej: @UseGuards(PlanGuard)
+         @Plan('whatsapp') para endpoints de WhatsApp.
+      6. Password reset: POST /auth/forgot-password (envía email con link
+         + token 1h), POST /auth/reset-password (cambia password).
+      7. Rate limiting en login: 5 intentos/min por IP. Account lockout
+         después de 10 intentos fallidos (30 min).
+      8. Middleware set_tenant_context: extraer hotelId del JWT, llamar
+         set_config('app.tenant_id', hotelId) para RLS.
+      Output: Módulo Auth completo con guards, DTOs, tests.
+    wave: 1
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["FND-01", "CORR-02", "CORR-03"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["NestJS 11", "TypeScript 5.5", "bcrypt", "jsonwebtoken", "@nestjs/jwt", "@nestjs/passport"]
+    acceptance_criteria:
+      - "POST /auth/register crea usuario + hotel + genera JWT"
+      - "POST /auth/login valida credenciales y retorna tokens"
+      - "JWT expira en 15 min, refresh token en 7 días"
+      - "Roles: admin, staff, super_admin funcionales con guards"
+      - "Planes: free, micro, starter, growth, pro, founders en JWT payload"
+      - "Rate limiting: 5 login attempts/min por IP"
+      - "Password reset: email con link + nuevo password"
+      - "set_tenant_context middleware operativo"
+    handoff:
+      do_not_reinvestigate:
+        - "Auth implementation details in auth.module.ts"
+        - "JWT keys path: config/keys/ (no commit)"
+      target_files:
+        - "apps/api/src/auth/"
+        - "apps/api/src/common/guards/"
+      acceptance_checks:
+        - "POST /auth/register -> 201 + JWT"
+        - "POST /auth/login -> 200 + JWT"
+        - "GET /auth/me -> 200 con datos usuario"
+
+  - id: "FND-05"
+    title: "Email transaccional: bienvenida, password reset, facturas"
+    description: >
+      Configurar envío de emails transaccionales:
+      1. Proveedor: Resend (mejor para startups, $0/mes primeras 3000 emails/mes)
+         o SendGrid (trial 100 emails/día). Decisión basada en API y precio.
+      2. Templates: email de bienvenida, password reset, confirmación de
+         registro, notificación de cambio de plan, factura mensual.
+         Templates en React Email (resend/react-email) o HTML inline.
+      3. Integración NestJS: mail.module.ts con MailService que abstrae
+         el proveedor. BullMQ job para enviar email asíncrono.
+      4. Eventos: AuthService emite evento 'user.registered' que MailService
+         consume para enviar bienvenida. Mismo patrón para password reset.
+      Output: Módulo Mail operativo con templates y cola.
+    wave: 1
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["FND-01", "FND-03", "FND-04"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["NestJS 11", "Resend SDK", "React Email", "BullMQ"]
+    acceptance_criteria:
+      - "POST /auth/register envía email de bienvenida"
+      - "POST /auth/forgot-password envía email con reset link"
+      - "Emails se envían asíncronamente vía BullMQ"
+      - "Templates: bienvenida, password reset, invoice (placeholder)"
+      - "Logging de envío exitoso/fallido con correlation ID"
+    handoff:
+      do_not_reinvestigate:
+        - "Resend API key en secrets"
+      target_files:
+        - "apps/api/src/mail/"
+        - "apps/api/src/mail/templates/"
+      acceptance_checks:
+        - "Email de bienvenida llega en <30s después de registro"
+        - "Password reset email contiene link válido"
+
+  - id: "FND-06"
+    title: "Desplegar OpenWA + WhatsApp Adapter Interface"
+    description: >
+      Desplegar OpenWA (self-hosted WhatsApp API Gateway) en Fly.io como backend de
+      mensajería para el MVP. OpenWA es open source (MIT), hecho en NestJS+TypeScript
+      (mismo stack), se despliega con Docker. Cada hotel tendrá su propia sesión.
+      Además, implementar la interfaz abstracta (adapter) que permita cambiar de
+      OpenWA a WhatsApp Business API oficial en el futuro sin reescribir código.
+      Pasos:
+      1. Desplegar OpenWA en Fly.io:
+         - Clonar repo: https://github.com/rmyndharis/OpenWA
+         - Configurar docker-compose con PostgreSQL como backend
+         - Hacer deploy en Fly.io con fly.toml
+         - Configurar dominio/ssl
+      2. Crear WhatsAppAdapter interface en NestJS:
+         - Interface: sendConfirmation(), sendAlert(), sendReminder()
+         - DTOs para mensajes estandarizados
+      3. Implementar OpenWAProvider:
+         - Conexión REST a OpenWA API
+         - Manejo de sesiones por hotel
+         - QR code linking flow (el hotelero escanea con su celular)
+         - Webhook para mensajes entrantes
+      4. Documentar estrategia de migración a Business API oficial
+    wave: 1
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["FND-03", "FND-01"]
+    conflicts_with: []
+    details:
+      openwa_repo: "https://github.com/rmyndharis/OpenWA"
+      openwa_port: 2785
+      adapter_contract:
+        sendConfirmation: "Booking → WhatsApp notification"
+        sendAlert: "Overbooking risk → WhatsApp alert"
+        sendReminder: "Pre-check-in reminder"
+    acceptance_criteria:
+      - "OpenWA desplegado en Fly.io y accesible vía API REST"
+      - "WhatsAppAdapter interface definida en NestJS con tipos"
+      - "OpenWAProvider implementa la interfaz correctamente"
+      - "Se puede crear sesión, escanear QR, y enviar mensaje de prueba"
+      - "Webhook recibe mensajes entrantes y los reenvía al backend"
+    verification: >
+      curl -X POST https://openwa.nuestrodmo.com/api/sessions/test/start &&
+      curl http://openwa.nuestrodmo.com/api/sessions/test/qr | jq .qrCode
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WAVE 2: CORE MVP (Semanas 4-8)
+  # Dependencias: FND-01, FND-02, FND-03, FND-04
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: "CORE-01"
+    title: "Data model + Prisma schema + migraciones (todas las entidades)"
+    description: >
+      Implementar modelo de datos completo con Prisma ORM:
+      1. Configurar Prisma con PostgreSQL Neon. Schema en schema.prisma.
+         Generar cliente Prisma. Seed data para desarrollo.
+      2. Entidades Core (con tenant_id en todas):
+         - Hotel: id, name, slug, timezone (Colombia/Bogotá default), currency
+           (COP default), address, phone, email, logo, checkin_time, checkout_time,
+           is_active, created_at, updated_at
+         - User: id, hotel_id, email, password_hash, name, role (ADMIN, STAFF,
+           SUPER_ADMIN), plan (FREE, MICRO, STARTER, GROWTH, PRO, FOUNDERS),
+           is_active, last_login_at, created_at
+         - RoomType: id, hotel_id, name, description, base_occupancy,
+           max_occupancy, size_sqm, bed_type, amenities (JSONB), images (JSONB),
+           is_active, created_at
+         - Room: id, room_type_id, room_number, floor, status (AVAILABLE,
+           MAINTENANCE, OUT_OF_ORDER), is_active
+         - Inventory: hotel_id, room_type_id, date, total_rooms, available_rooms,
+           booked_rooms, oversell_limit DEFAULT 0, version (optimistic lock),
+           updated_at. UNIQUE(hotel_id, room_type_id, date)
+         - Restriction: hotel_id, room_type_id, date, min_los, max_los,
+           cta (boolean), ctd (boolean), stop_sell (boolean), version.
+           UNIQUE(hotel_id, room_type_id, date)
+      3. Entidades Pricing:
+         - RatePlan: id, hotel_id, name, type (BAR, DERIVED, PROMOTIONAL,
+           CHANNEL_SPECIFIC), base_rate_plan_id (nullable), currency (COP),
+           is_active, created_at
+         - Rate: hotel_id, room_type_id, rate_plan_id, date, amount (Decimal),
+           currency, version. UNIQUE(hotel_id, room_type_id, rate_plan_id, date)
+         - Season: id, hotel_id, name, type (HIGH, MEDIUM, LOW), start_date,
+           end_date, color_hex, created_at
+      4. Entidades Booking:
+         - Booking: id, hotel_id, channel (DIRECT, BOOKING_COM, EXPEDIA,
+           DESPEGAR, AIRBNB), channel_booking_id, guest_name, guest_email,
+           guest_phone, checkin_date, checkout_date, total_amount (Decimal),
+           currency, status (PENDING, CONFIRMED, CANCELLED, MODIFIED, NO_SHOW,
+           CHECKED_IN, CHECKED_OUT), idempotency_key (UNIQUE), metadata (JSONB),
+           created_at, updated_at
+         - BookingRoom: id, booking_id, room_type_id, rate_plan_id, date,
+           amount (Decimal), room_id (nullable, assigned at check-in)
+         - Cancellation: id, booking_id, cancelled_at, reason,
+           cancellation_fee (Decimal), refund_amount (Decimal), refund_status
+      5. RLS policies en migración: CREATE POLICY tenant_isolation ON hotel
+         USING (id = current_setting('app.tenant_id')::UUID). Misma policy
+         en Inventory, Rate, Booking, RoomType, etc.
+      6. Índices: (hotel_id, date) en Inventory, Rate. (hotel_id, status)
+         en Booking. (idempotency_key) UNIQUE en Booking. (hotel_id, slug)
+         UNIQUE en Hotel.
+      Output: schema.prisma completo + migraciones + seed + policies RLS.
+    wave: 2
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["FND-01", "FND-03", "CORR-02"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["Prisma", "PostgreSQL 16", "TypeScript 5.5"]
+    acceptance_criteria:
+      - "schema.prisma define todas las entidades core + pricing + booking"
+      - "Migraciones Prisma ejecutan CREATE TABLE con constraints correctos"
+      - "RLS policies: CREATE POLICY por tabla, enable row level security"
+      - "Seed data: 2 hoteles demo, room types, inventory para 30 días"
+      - "Índices compuestos (hotel_id, date) en Inventory y Rate"
+      - "Idempotency key UNIQUE en Booking"
+    handoff:
+      do_not_reinvestigate:
+        - "Schema completo en prisma/schema.prisma"
+        - "Migraciones en prisma/migrations/"
+        - "Seed en prisma/seed.ts"
+      target_files:
+        - "apps/api/prisma/schema.prisma"
+        - "apps/api/prisma/seed.ts"
+        - "apps/api/prisma/migrations/"
+      acceptance_checks:
+        - "npx prisma generate compila sin errores"
+        - "npx prisma db push aplica schema a Neon"
+        - "npx prisma db seed inserta datos demo"
+
+  - id: "CORE-02"
+    title: "Pooled inventory con optimistic locking + Redis cache"
+    description: >
+      Implementar servicio de inventario pooled con concurrencia segura:
+      1. AvailabilityService: consulta de disponibilidad por hotel + fechas.
+         GET /api/v1/availability?hotelId=X&checkin=Y&checkout=Z&roomTypeId=W
+         Retorna: { dates: [{ date, available, total, rate }] }.
+      2. Redis cache: key = avail:{hotelId}:{roomTypeId}:{date}. TTL = 5s.
+         Cache-aside pattern: leer de Redis, si miss -> PostgreSQL -> set cache.
+         Invalidación en write: eliminar key de Redis al actualizar inventario.
+      3. Optimistic locking: UPDATE inventory SET available_rooms = available_rooms - 1,
+         version = version + 1 WHERE hotel_id = $1 AND room_type_id = $2 AND
+         date = $3 AND version = $4. Si rows_affected = 0, retry.
+      4. SERIALIZABLE isolation: en transacciones de reserva que modifican
+         inventario, usar SET TRANSACTION ISOLATION LEVEL SERIALIZABLE.
+         Retry en serialization failure (40001).
+      5. Bulk availability: GET /api/v1/availability/bulk?hotelId=X&
+         from=Y&to=Z. Retorna matriz 2D: roomType x date con disponibilidad y
+         tarifa mínima. Cacheado en Redis con TTL 10s.
+      6. Endpoints:
+         - GET /api/v1/availability/:roomTypeId/:date
+         - PATCH /api/v1/inventory/:roomTypeId/:date (update manual hotelero)
+         - POST /api/v1/inventory/bulk (batch update desde CSV o calendario)
+         WebSocket (Socket.io) para actualizaciones en tiempo real del dashboard.
+      Output: AvailabilityModule completo con API, cache, locks, tests.
+    wave: 2
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["CORE-01"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["NestJS 11", "Redis (Upstash)", "ioredis", "@nestjs/bullmq"]
+    acceptance_criteria:
+      - "GET availability responde <100ms p99 (Redis hit) o <500ms (miss)"
+      - "Optimistic locking previene overbooking en concurrencia (test con 10 requests paralelas)"
+      - "Redis cache se invalida al actualizar inventario"
+      - "SERIALIZABLE isolation + retry en serialization failure"
+      - "Bulk availability: matriz roomType x date en <200ms"
+      - "WebSocket notifica cambios de disponibilidad a dashboard"
+    handoff:
+      do_not_reinvestigate:
+        - "Redis cache strategy: cache-aside con TTL 5s"
+        - "Optimistic locking: version column + retry"
+      target_files:
+        - "apps/api/src/availability/"
+        - "apps/api/src/availability/availability.service.ts"
+      acceptance_checks:
+        - "Tests de concurrencia: 10 requests simultáneas -> 0 overbookings"
+        - "Benchmark: 1000 requests GET availability en <2s"
+
+  - id: "CORE-03"
+    title: "PWA + Service Worker + IndexedDB para modo offline"
+    description: >
+      Implementar Progressive Web App con capacidad offline completa:
+      1. Next.js PWA config: next.config.js con pwa plugin (next-pwa o
+         @serwist/next). Manifest: name, icons (192x192, 512x512),
+         theme_color (#1E88E5 o brand color), display: standalone.
+      2. Service Worker: precache shell (HTML, CSS, JS). Cache-first para
+         assets estáticos. Network-first para API data. Offline fallback page.
+         Background sync para data pendiente cuando vuelva conexión.
+      3. IndexedDB: store para inventario local, reservas offline,
+         configuración hotel. Librería: Dexie.js (wrapper IndexedDB simple).
+         Schema: rooms, inventory, bookings, pendingSync.
+      4. Sincronización offline->online: cuando Service Worker detecta
+         conexión, replay pending operations en orden cronológico.
+         Usar Background Sync API. Resolver conflictos con "last write wins"
+         + timestamp. Notificar al usuario si hay conflictos.
+      5. UI responsive mobile-first: Tailwind breakpoints. Diseñado para
+         pantallas 6" Android gama media. Botones grandes (min 48px).
+         Contraste alto para lectura en exteriores.
+      6. Instalación PWA: prompt de instalación (beforeinstallprompt event).
+         Banner "Agrega a tu pantalla de inicio" después de 2 visitas.
+      Output: PWA funcional con offline mode, Service Worker, IndexedDB.
+    wave: 2
+    agent: "gem-implementer-mobile"
+    status: pending
+    dependencies: ["FND-01", "CORE-02"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: true
+    tech_stack: ["Next.js 15", "Service Worker", "Dexie.js", "Tailwind CSS 4"]
+    acceptance_criteria:
+      - "PWA installable: manifest + Service Worker + HTTPS"
+      - "Modo offline: carga shell + data cacheada de IndexedDB"
+      - "Background sync: operaciones offline se sincronizan al reconectar"
+      - "IndexedDB: almacena al menos 30 días de inventario local"
+      - "Mobile-first: UI funcional en Android 320px width"
+      - "Prompt de instalación aparece después de 2 visitas"
+    handoff:
+      do_not_reinvestigate:
+        - "PWA config: manifest, SW, icons"
+        - "IndexedDB schema: rooms, inventory, bookings, pendingSync"
+        - "Sync strategy: network-first, offline fallback, background sync"
+      target_files:
+        - "apps/web/public/sw.js"
+        - "apps/web/public/manifest.json"
+        - "apps/web/src/lib/db.ts"
+        - "apps/web/src/lib/sync.ts"
+      acceptance_checks:
+        - "Lighthouse PWA audit: >90 puntos"
+        - "Test offline: chrome devtools offline mode -> carga UI + data cacheada"
+        - "Test sync: crear reserva offline -> online -> sincronizada"
+
+  - id: "CORE-04"
+    title: "Redis caching layer avanzado: rate limiting, sesiones, locks"
+    description: >
+      Implementar capa de Redis para rendimiento y control:
+      1. Rate limiting: @nestjs/throttler con Redis store (ioredis).
+         Config: free=100req/min, micro=300, starter=500, growth=1000,
+         pro=2000, founders=2000. Endpoints públicos más restrictivos.
+      2. Session store: Redis para refresh tokens. TTL = 7 días.
+         Blacklist de JWT invalidados (logout, password change).
+      3. Distributed locks: Redlock pattern para operaciones críticas
+         (reserva, actualización de inventario). Lock TTL = 2s, retry
+         3 veces con 100ms delay. Usar ioredis + redlock package.
+      4. Cache warming: al iniciar app, cargar inventario de los próximos
+         7 días de hoteles activos a Redis. Job BullMQ schedule cada 5 min.
+      5. Health check: Redis ping cada 30s. Circuit breaker: si Redis caído,
+         servir desde PostgreSQL directamente (más lento pero funcional).
+      Output: RedisModule con rate limiting, session, locks, cache warming.
+    wave: 2
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["CORE-02"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["NestJS 11", "ioredis", "@nestjs/throttler", "redlock"]
+    acceptance_criteria:
+      - "Rate limiting por plan: free=100req/min, founders=2000req/min"
+      - "Refresh tokens en Redis con TTL 7 días"
+      - "Redlock previene doble reserva en concurrencia"
+      - "Cache warming job carga inventario 7 días cada 5 min"
+      - "Circuit breaker: API funcional sin Redis (degradado)"
+    handoff:
+      do_not_reinvestigate:
+        - "Rate limiting config por plan en redis/"
+        - "Redlock pattern para operaciones críticas"
+        - "Cache warming schedule cada 5 min"
+      target_files:
+        - "apps/api/src/redis/"
+        - "apps/api/src/common/rate-limiter/"
+      acceptance_checks:
+        - "Test: 101 requests en 1 min -> 429 Too Many Requests (free)"
+        - "Test: Redis caído -> API responde sin cache"
+
+  - id: "CORE-05"
+    title: "Audit log estructurado con correlation IDs"
+    description: >
+      Implementar sistema de auditoría para todas las transacciones:
+      1. AuditInterceptor: intercepta requests POST/PUT/PATCH/DELETE,
+         registra: correlationId, userId, hotelId, action, resource,
+         resourceId, oldValue, newValue, ip, userAgent, timestamp.
+      2. Audit table en PostgreSQL: id UUID, correlation_id UUID, hotel_id UUID,
+         user_id UUID, action (string), resource (string), resource_id UUID,
+         old_value JSONB, new_value JSONB, metadata JSONB, ip inet,
+         user_agent text, created_at timestamptz. Índice en (hotel_id, created_at).
+      3. Eventos de dominio: cada módulo emite eventos (EventEmitter2) que
+         AuditService consume. Eventos: booking.created, inventory.updated,
+         rate.changed, user.logged_in, etc.
+      4. BulkQueue para inserts de auditoría (no bloquean request):
+         BullMQ cola 'audit' con jobs batch cada 50 registros o 5s.
+         Si cola llena, buffer en memoria con flush periódico.
+      5. API de consulta: GET /api/v1/admin/audit-logs?hotelId=X&
+         from=Y&to=Z&action=booking.created (solo admin y super_admin).
+         Paginación con cursor (no offset). Retención: 90 días para MVP.
+      Output: AuditModule completo con interceptor, eventos, cola, API.
+    wave: 2
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["CORE-01", "FND-04"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["NestJS 11", "BullMQ", "PostgreSQL", "EventEmitter2"]
+    acceptance_criteria:
+      - "Toda mutación API (POST/PUT/PATCH/DELETE) genera audit log"
+      - "Audit log contiene: correlationId, userId, hotelId, action, old/new values"
+      - "Eventos de dominio: booking.created, inventory.updated, rate.changed"
+      - "Cola asíncrona para inserts (no bloquea response)"
+      - "API consulta: GET /api/v1/admin/audit-logs con paginación cursor"
+    handoff:
+      do_not_reinvestigate:
+        - "AuditInterceptor registra mutaciones automáticamente"
+        - "Eventos de dominio: cada módulo emite eventos auditables"
+      target_files:
+        - "apps/api/src/audit/"
+        - "apps/api/src/common/interceptors/audit.interceptor.ts"
+      acceptance_checks:
+        - "Hacer POST booking -> audit_log tiene registro con old=null, new=booking"
+        - "Hacer PATCH inventory -> audit_log tiene old=50, new=45"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WAVE 3: OTAs (procesos administrativos arrancan Día 1; desarrollo técnico Semanas 4-12)
+  # Dependencias: CORE-01, CORE-02
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: "OTA-01"
+    title: "Iniciar proceso certificación Booking.com Connectivity (Día 1)"
+    description: >
+      PROCESO ADMINISTRATIVO EXTERNO (no código):
+      1. Investigar requirements actuales de Booking.com Connectivity Program:
+         https://partner.booking.com/en-gb/registration
+      2. Completar application: información empresa, stack tecnológico,
+         hoteles piloto (10 hoteles en Tolú/Coveñas), tipo de conexión
+         (API + XML push/pull).
+      3. Preparar documentación técnica: cómo se enviarán ARI (Availability,
+         Rates, Inventory), cómo se recibirán reservas (webhooks o polling).
+      4. Timeline esperado: 3-6 meses. Probar también Booking.com for Partners
+         (versión simplificada para propiedades pequeñas).
+      5. Alternativa: si Connectivity Program rechaza startup, usar
+         Booking.com Demand Partner API (Affiliate) como puente + WhatsApp.
+      Output: Application submitted. Tracking document.
+    wave: 3
+    agent: "gem-researcher"
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    acceptance_criteria:
+      - "Booking.com Connectivity application completada y enviada"
+      - "Documentación técnica preparada (ARI format, webhook endpoints)"
+      - "Timeline documentado: expected certification date + milestones"
+      - "Plan B documentado: Demand API si rechazan Connectivity Program"
+    handoff:
+      do_not_reinvestigate:
+        - "Booking.com application submitted (tracking ID)"
+        - "Documentación técnica preparada para revisión Booking"
+      target_files:
+        - "docs/ota/booking-certification.md"
+      acceptance_checks:
+        - "docs/ota/booking-certification.md existe con timeline + tracking"
+
+  - id: "OTA-02"
+    title: "Iniciar alianza Despegar: partnerships + portal"
+    description: >
+      PROCESO ADMINISTRATIVO EXTERNO (no código):
+      1. Contactar equipo de partnerships de Despegar (partner@despegar.com
+         o portal partnerships.despegar.com). Despegar es OTA #1 en COL.
+      2. Completar registration en Despegar Partner Portal. Obtener API
+         credentials (partner API key, secret).
+      3. Documentar API Despegar: endpoints, autenticación, rate limits,
+         formatos de Availability/Rate/Booking.
+      4. Timeline: 2-4 meses. Despegar tiene proceso más ágil que Booking.
+      5. Mientras tanto: flujo puente manual (WhatsApp + CSV).
+      Output: Application submitted. API credentials. Timeline.
+    wave: 3
+    agent: "gem-researcher"
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    acceptance_criteria:
+      - "Despegar partnership application completada"
+      - "API credentials obtenidas (partner API key + secret)"
+      - "API Despegar documentada: endpoints, formatos, rate limits"
+      - "Timeline documentado: expected certification date"
+    handoff:
+      do_not_reinvestigate:
+        - "Despegar API credentials (en secrets)"
+        - "API Despegar documentación"
+      target_files:
+        - "docs/ota/despegar-certification.md"
+      acceptance_checks:
+        - "docs/ota/despegar-certification.md existe con timeline + credentials path"
+
+  - id: "OTA-03"
+    title: "Conector Booking.com con Demand API (Affiliate) como puente"
+    description: >
+      Implementar integración con Booking.com mientras llega certificación:
+      1. Demand Partner API (Affiliate): consultar disponibilidad de propiedades
+         usando xsd_hotel_id + partner credentials. Endpoints:
+         GET availability, GET booking details (solo lectura).
+      2. OTA XML Push (cuando llegue certificación): implementar adaptador
+         con parser OTA_HotelAvailNotifRQ/RS y OTA_HotelResNotifRQ/RS.
+         Librería: xml2js + validación XSD.
+      3. Connector pattern: interface OTAConnector con métodos:
+         pushAvailability(availability[]), pushRates(rates[]),
+         pullBookings(from, to). BookingConnector implementa con XML.
+      4. Rate limiting: máx 1 request/seg para XML, cola BullMQ con
+         rate limiter. Retry con backoff si 429/503.
+      5. Webhook receiver: POST /api/v1/channels/booking/webhook con
+         HMAC validation. Procesar booking.notification (nueva reserva,
+         cancelación, modificación).
+      6. Reconciliation: cada 5 min, BullMQ job que compara inventario local
+         vs Booking (vía API). Reporta discrepancias > 5%.
+         Output: BookingConnector module + adaptador XML + colas + tests.
+    wave: 3
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["OTA-01", "CORE-02"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["NestJS 11", "xml2js", "BullMQ", "axios"]
+    acceptance_criteria:
+      - "Demand API: consulta disponibilidad Booking.com (solo lectura)"
+      - "OTA XML Parser: OTA_HotelAvailNotifRQ/RS, OTA_HotelResNotifRQ/RS"
+      - "Connector interface: pushAvailability, pushRates, pullBookings"
+      - "Webhook receiver con HMAC validation"
+      - "Rate limiting: 1 req/seg con cola BullMQ + backoff"
+      - "Reconciliation cada 5 min: compara inventario local vs Booking"
+    handoff:
+      do_not_reinvestigate:
+        - "Demand API credentials en secrets"
+        - "OTA XML parser en channels/booking/parser"
+        - "Connector pattern en channels/connector.interface.ts"
+      target_files:
+        - "apps/api/src/channels/booking/"
+        - "apps/api/src/channels/connector.interface.ts"
+      acceptance_checks:
+        - "GET availability from Booking -> parsea respuesta XML/JSON"
+        - "Push availability a Booking -> webhook confirmación"
+        - "Reconciliation job detecta discrepancia manual >5%"
+
+  - id: "OTA-04"
+    title: "Conector Despegar (Partner API REST)"
+    description: >
+      Implementar integración con Despegar Partner API:
+      1. Despegar API REST: autenticación con API key + secret en header.
+         Endpoints: GET /availability, POST /rates, GET /bookings,
+         POST /booking/notification.
+      2. DespegarConnector implementando OTAConnector interface:
+         pushAvailability, pushRates, pullBookings con adaptación a
+         formato Despegar (JSON, no XML).
+      3. Rate limits: Despegar permite 10 req/min. Cola BullMQ con
+         throttle (cada 6 seg). Retry 3 veces con backoff exponencial.
+      4. Webhook: POST /api/v1/channels/despegar/webhook con validación
+         de signature en header X-Despegar-Signature.
+      5. Reconciliation: job BullMQ cada 10 min que compara inventario
+         local vs Despegar. Reporta discrepancias.
+      6. Puerto CSV (pre-certificación): exportar inventario a CSV con
+         formato Despegar. Hotelero puede subir manualmente al portal.
+         Descargar reservas desde portal Despegar en CSV.
+      Output: DespegarConnector module + colas + CSV export + tests.
+    wave: 3
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["OTA-02", "CORE-02"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["NestJS 11", "BullMQ", "axios", "csv-parse", "csv-stringify"]
+    acceptance_criteria:
+      - "DespegarConnector implementa OTAConnector interface"
+      - "Push/Pull disponibilidad y tarifas vía API REST"
+      - "Webhook receiver con validación de signature"
+      - "Rate limiting: 10 req/min con cola BullMQ"
+      - "CSV export/import como fallback pre-certificación"
+      - "Reconciliation cada 10 min con alerta de discrepancias"
+    handoff:
+      do_not_reinvestigate:
+        - "Despegar API credentials en secrets"
+        - "CSV format: columnas requeridas por Despegar"
+      target_files:
+        - "apps/api/src/channels/despegar/"
+      acceptance_checks:
+        - "POST rates a Despegar -> HTTP 200 OK"
+        - "GET bookings desde Despegar -> parsea JSON correctamente"
+        - "CSV export -> formato compatible con Despegar portal"
+
+  - id: "OTA-05"
+    title: "Flujo puente OTA: WhatsApp recordatorios + Demand API verificación + CSV"
+    description: >
+      Implementar flujo puente que funciona desde el MVP sin certificación OTA:
+      1. Cuando hotelero marca habitación OCUPADA en la PWA:
+         a. Guardar en BD + Redis
+         b. Disparar flujo puente:
+            - Enviar WhatsApp: "🔴 Habitación 201 ocupada. Recuerda cerrar
+              en Booking.com y Despegar."
+            - Consultar Demand API de Booking: ¿sigue disponible?
+              Si sí -> WhatsApp cada 2h hasta que confirme cierre manual.
+              Si no -> "✅ Booking actualizado."
+            - Consultar Despegar: similar vía API o portal.
+         c. Si después de 3 intentos (6h) no se confirma cierre:
+            - Escalar a WhatsApp con tono más urgente.
+            - Notificar al admin del hotel.
+      2. CSV export: descargar reporte de inventario del día para
+         cargar manualmente en portal OTA.
+      3. Reporte semanal: "% de cumplimiento de actualizaciones manuales"
+         por hotelero. Enviar por WhatsApp cada lunes 8 AM.
+      4. Cuando llegue certificación OTA:
+         - El push automático reemplaza al flujo manual
+         - Hotelero NO nota el cambio (misma UI, mismo flujo)
+         - Solo desaparecen los mensajes de recordatorio WhatsApp
+      Output: Flujo puente completo con WhatsApp + Demand API + CSV.
+    wave: 3
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["OTA-03", "CORE-03"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["NestJS 11", "BullMQ", "WhatsApp Cloud API"]
+    acceptance_criteria:
+      - "Marcar habitación ocupada -> WhatsApp recordatorio en <30s"
+      - "Demand API verifica disponibilidad Booking cada 2h"
+      - "CSV export: inventario del día en formato descargable"
+      - "Reporte semanal de cumplimiento por WhatsApp"
+      - "Transición transparente cuando llegue certificación OTA"
+    handoff:
+      do_not_reinvestigate:
+        - "Flujo puente: WhatsApp + Demand API + CSV"
+        - "Misma UI funciona con y sin certificación"
+      target_files:
+        - "apps/api/src/bridge/"
+      acceptance_checks:
+        - "Test: cerrar habitación -> WhatsApp recibido en <30s"
+        - "Test: Booking.confirmado -> no más recordatorios"
+
+  - id: "OTA-06"
+    title: "Edge cases de booking: cancelaciones, modificaciones, no-shows, overbooking recovery"
+    description: >
+      Implementar manejo de edge cases en el ciclo de vida de reservas:
+      1. Cancelaciones: Booking status -> CANCELLED. Devolver inventario
+         (incrementar available_rooms). Calcular cancellation fee según
+         política del hotel (free cancellation hasta X días antes,
+         50% después, 100% no-show). Refund amount -> PENDING/COMPLETED/FAILED.
+         Notificar a canales OTA.
+      2. Modificaciones: cambiar fechas, room type, número de huéspedes.
+         Como cancelación + nueva reserva (para mantener audit trail).
+         Preservar idempotency_key original. Ajustar tarifa.
+      3. No-shows: job BullMQ cada hora checkea bookings con status CONFIRMED
+         y checkout_date < now(). Marcar NO_SHOW. NO devolver inventario
+         (huésped no llegó pero habitación no se puede revender ese día).
+      4. Partial bookings: reserva de múltiples room types donde algunos
+         están disponibles y otros no. Transacción: reservar todos o
+         ninguno (SERIALIZABLE). Si no todos disponibles -> rechazar
+         completa (no reserva parcial).
+      5. Overbooking recovery flow:
+         a. Detectar overbooking: reconciliation job encuentra
+            available_rooms < 0.
+         b. Alertar inmediatamente: WhatsApp admin hotel + dashboard alerta.
+         c. Opciones: upgrade a room superior, relocalizar a hotel aliado,
+            compensación al huésped.
+         d. Tracking: incident report con causa raíz, resolución, tiempo.
+         e. SLA: detectar en <1min, alertar en <2min.
+      Output: Edge case handlers + recovery flow + tests.
+    wave: 3
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["CORE-01", "OTA-03"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["NestJS 11", "BullMQ"]
+    acceptance_criteria:
+      - "Cancelación: devuelve inventario, calcula fee, notifica canales"
+      - "Modificación: cancel + new booking con mismo idempotency_key"
+      - "No-show: job automático, no devuelve inventario"
+      - "Partial booking: rechazar si no todos disponibles"
+      - "Overbooking: detectar <1min, alertar WhatsApp <2min"
+    handoff:
+      do_not_reinvestigate:
+        - "Edge cases implementados en booking.service.ts"
+        - "Overbooking recovery flow documentado"
+      target_files:
+        - "apps/api/src/booking/"
+        - "apps/api/src/booking/booking.service.ts"
+      acceptance_checks:
+        - "Test: cancelar booking -> inventario restaurado"
+        - "Test: no-show job -> booking.status = NO_SHOW"
+        - "Test: overbooking detection -> alerta WhatsApp"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WAVE 4: EXPERIENCIA HOTELERO (Semanas 6-12)
+  # Dependencias: CORE-02, CORE-03, FND-04
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: "EXP-01"
+    title: "Integrar OpenWA como backend de WhatsApp + adapter pattern"
+    description: >
+      Integrar OpenWA como backend principal de mensajería para notificaciones.
+      Usando el adapter definido en FND-06, implementar el flujo completo:
+      1. Verificar que OpenWA esté corriendo (deploy FND-06) y accesible.
+      2. Por cada hotel al registrarse:
+         - Crear sesión en OpenWA
+         - Mostrar QR en pantalla (el hotelero escanea con WhatsApp)
+         - Guardar sessionId en BD asociado al hotel
+      3. Envío de mensajes vía OpenWAProvider:
+         - POST /api/sessions/{id}/messages/send-text
+         - Mensajes: confirmación reserva, recordatorio OTA, alerta overbooking,
+           reporte semanal, factura
+      4. Webhook receiver: configurar webhook en OpenWA que apunte a
+         POST /api/v1/whatsapp/webhook para mensajes entrantes.
+      5. Sesiones de prueba: verificar que el QR se genera, que se escanea,
+         que los mensajes llegan. 3 hoteles de prueba.
+      6. Monitoreo: health check de sesiones OpenWA. Si una sesión se cae
+         (phone offline), alertar al hotelero por email y al admin.
+      Output: OpenWAProvider completo + WhatsAppModule con webhook.
+    wave: 4
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["FND-06", "CORE-03"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["NestJS 11", "OpenWA", "axios", "BullMQ"]
+    acceptance_criteria:
+      - "Hotel puede escanear QR y vincular su WhatsApp en <2 min"
+      - "Mensaje de confirmación de reserva llega al celular en <5s"
+      - "Webhook recibe mensajes entrantes del hotelero"
+      - "Si sesión se cae, se reenvía QR al hotelero (reconexión)"
+      - "Health check reporta estado de cada sesión (connected/disconnected)"
+    handoff:
+      do_not_reinvestigate:
+        - "OpenWA deploy en Fly.io (FND-06)"
+        - "WhatsAppAdapter interface"
+      target_files:
+        - "apps/api/src/whatsapp/"
+      acceptance_checks:
+        - "POST a webhook de prueba -> WhatsApp recibido en <10s"
+        - "QR generation -> escaneo -> mensaje enviado (flujo completo)"
+
+  - id: "EXP-02"
+    title: "Dashboard hotelero: ocupación, ADR, RevPAR, channel mix"
+    description: >
+      Dashboard principal para el hotelero con métricas en tiempo real:
+      1. Next.js App Router: layout con sidebar (Dashboard, Inventario,
+         Tarifas, Reservas, Reportes, Configuración). Mobile-first.
+      2. Dashboard page:
+         - Cards: Ocupación hoy (%), ADR (COP), RevPAR (COP), Próximas llegadas (count)
+         - Gráfico ocupación últimos 30 días (Chart.js o Recharts). Línea +
+           barra para comparar año anterior.
+         - Tabla próximas reservas (hoy + 7 días): huésped, habitación,
+           check-in, check-out, total, estado.
+         - Channel mix: doughnut chart con % reservas por canal.
+         - Alertas: overbooking, tarifas no publicadas, discrepancias OTA.
+      3. Datos en tiempo real: WebSocket (Socket.io) conectado a backend
+         para actualizaciones automáticas (nueva reserva, cambio ocupación).
+      4. Modo offline: dashboard se carga desde IndexedDB cuando no hay
+         conexión. Muestra "última actualización: hace X min".
+      5. Diseño para Don José: fuente grande (16px base), botones grandes
+         (min 48px), contraste alto (contrast ratio >4.5:1), colores
+         semánticos (verde=disponible, rojo=ocupado, amarillo=alerta).
+         Máximo 3 acciones visibles en la pantalla principal.
+      Output: Dashboard funcional con gráficos, WebSocket, offline.
+    wave: 4
+    agent: "gem-designer"
+    status: pending
+    dependencies: ["CORE-02", "CORE-03"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: true
+    tech_stack: ["Next.js 15", "Recharts", "Socket.io", "Tailwind CSS 4", "Chart.js"]
+    acceptance_criteria:
+      - "Dashboard carga en <2s (con cache) o <5s (primera vez)"
+      - "Gráficos: ocupación 30d, channel mix doughnut, ADR trend"
+      - "WebSocket actualiza cards en tiempo real"
+      - "Modo offline: datos de IndexedDB con label 'última actualización'"
+      - "UI accesible: contraste >4.5:1, font-size >=16px, botones >=48px"
+      - "Mobile-first: funcional en 320px-768px width"
+    handoff:
+      do_not_reinvestigate:
+        - "Dashboard layout: sidebar + main content + WebSocket"
+        - "Gráficos: Recharts para ocupación, channel mix, ADR"
+        - "Design system en tailwind.config.ts"
+      target_files:
+        - "apps/web/src/app/dashboard/"
+        - "apps/web/src/components/dashboard/"
+      acceptance_checks:
+        - "Lighthouse performance >80 (con cache)"
+        - "Lighthouse accessibility >90"
+        - "WebSocket: hacer reserva -> dashboard actualiza en <2s"
+
+  - id: "EXP-03"
+    title: "Onboarding progresivo para perfil Don José"
+    description: >
+      Tutorial interactivo dentro de la PWA diseñado para hoteleros
+      de 58 años con baja tecnología:
+      1. Al primer login: tour guiado de 5 pasos:
+         Paso 1: "Esta es tu pantalla principal. Aquí ves cuántas
+         habitaciones tienes ocupadas hoy." (highlight dashboard)
+         Paso 2: "Para marcar una habitación como ocupada, toca aquí."
+         (highlight botón + demo)
+         Paso 3: "Las reservas nuevas llegan aquí." (highlight tabla)
+         Paso 4: "Si tienes dudas, toca este botón y te ayudamos por
+         WhatsApp." (highlight help button)
+         Paso 5: "¡Listo! Puedes explorar. Siempre puedes volver al
+         tutorial desde el menú de ayuda."
+      2. Tooltips contextuales: al navegar a cada sección por primera
+         vez, tooltip explicativo (1 vez, no repetir).
+      3. WhatsApp como canal de onboarding: al registrarse, enviar
+         "¡Bienvenido! Responde cualquier duda aquí. Mientras tanto,
+         completa estos 3 pasos: 1) Agrega tus habitaciones
+         2) Configura tus tarifas 3) Conecta Booking.com"
+      4. Videos cortos (<1 min) en español colombiano: "Cómo marcar
+         una habitación", "Cómo ver tus reservas", "Cómo cambiar tarifas".
+         Usar mp4 comprimido (<2MB cada uno).
+      5. Modo demo: toggle para ver datos de ejemplo (no reales).
+         Útil para que el hotelero explore sin miedo a romper algo.
+      Output: Onboarding completo con tour, tooltips, WhatsApp, videos.
+    wave: 4
+    agent: "gem-designer"
+    status: pending
+    dependencies: ["EXP-02"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: true
+    tech_stack: ["Next.js 15", "Driver.js (tour)", "Tailwind CSS 4"]
+    acceptance_criteria:
+      - "Tour guiado de 5 pasos al primer login"
+      - "Tooltips contextuales en cada sección (1 vez)"
+      - "WhatsApp onboarding: bienvenida + 3 pasos vía template"
+      - "Videos <1 min en español colombiano (host en Fly.io storage)"
+      - "Modo demo: toggle activa datos de ejemplo"
+      - "UI diseñada para usuario de 58 años: no más de 3 acciones visibles"
+    handoff:
+      do_not_reinvestigate:
+        - "Tour steps en onboarding/tour.ts"
+        - "Tooltips contextuales en onboarding/tooltips.ts"
+      target_files:
+        - "apps/web/src/components/onboarding/"
+        - "apps/web/public/videos/"
+      acceptance_checks:
+        - "Nuevo usuario -> tour completo en primer login"
+        - "Tooltip aparece al navegar a Inventario primera vez"
+
+  - id: "EXP-04"
+    title: "Rate plans + calendario de temporadas"
+    description: >
+      Implementar gestión de tarifas y temporadas:
+      1. Rate Plans CRUD: POST/GET/PUT /api/v1/rate-plans.
+         BAR (Best Available Rate) como default. Derivadas con % de ajuste.
+         Por canal (ej: Booking 10% más caro que BAR).
+      2. Calendario temporadas: interfaz calendario (react-day-picker)
+         donde el hotelero pinta fechas como Alta/Media/Baja.
+         POST /api/v1/seasons con rango de fechas + tipo.
+      3. Rate matrix: tabla roomType x date (próximos 90 días) con
+         tarifa calculada (BAR * season multiplier * channel markup).
+         Edición inline de tarifas. Batch update con CSV pegable.
+      4. Floor price: setting en RatePlan que ninguna regla puede violar.
+         Validación al guardar rate: amount >= floor_price.
+      5. Rate parity: job BullMQ que compara tarifas en cada OTA
+         vs configuradas. Reporta disparidades >5%.
+      Output: Rate module completo con API + UI calendario.
+    wave: 4
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["CORE-02", "EXP-02"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: true
+    tech_stack: ["NestJS 11", "Next.js 15", "react-day-picker", "Tailwind CSS 4"]
+    acceptance_criteria:
+      - "CRUD rate plans: BAR, derivadas, channel-specific"
+      - "Calendario temporadas: paint dates as HIGH/MEDIUM/LOW"
+      - "Rate matrix: roomType x date con edición inline"
+      - "Floor price enforcement: ninguna tarifa < floor"
+      - "Rate parity job: compara tarifas OTA cada 15 min"
+    handoff:
+      do_not_reinvestigate:
+        - "Rate plans API en rates/"
+        - "Calendario UI con react-day-picker"
+      target_files:
+        - "apps/api/src/rates/"
+        - "apps/web/src/app/rates/"
+      acceptance_checks:
+        - "Crear rate plan -> disponible en matrix"
+        - "Pintar temporada -> rates se ajustan automáticamente"
+        - "Rate < floor_price -> error de validación"
+
+  - id: "EXP-05"
+    title: "Sistema de promociones básico"
+    description: >
+      Implementar motor simple de promociones:
+      1. CRUD promociones: POST /api/v1/promotions con:
+         nombre, tipo (DISCOUNT_PERCENTAGE, FIXED_AMOUNT, FREE_NIGHTS),
+         valor, fechas válidas, room types aplicables,
+         stackable (boolean), min_margin_percent.
+      2. Reglas: early bird (X% si reserva con Y días anticipación),
+         last minute (X% si reserva con <Y días), overnight stays
+         (X noches gratis en estadías de Y noches).
+      3. Stacking validation: si promoción no es stackable, no se combina
+         con otra. Siempre validar: rate final - discount >= floor_price.
+      4. UI: lista de promociones activas + formulario creación.
+         En el dashboard: "Promo activa: 20% early bird hasta dic 15"
+      5. Calendar effect: al activar promoción, recalcular rates en el
+         calendario visualmente (color diferente).
+      Output: Promotion module + UI gestión.
+    wave: 4
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["EXP-04"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: true
+    tech_stack: ["NestJS 11", "Next.js 15", "Tailwind CSS 4"]
+    acceptance_criteria:
+      - "CRUD promociones con tipos: %, monto fijo, noches gratis"
+      - "Reglas: early bird, last minute funcionales"
+      - "Stacking validation: no-stackable no se combina"
+      - "Floor price enforcement: rate final >= floor"
+      - "UI: lista promos activas + formulario creación"
+    handoff:
+      do_not_reinvestigate:
+        - "Promotion engine en promotions/"
+        - "Stacking validation en promotions/stacking.validator.ts"
+      target_files:
+        - "apps/api/src/promotions/"
+        - "apps/web/src/app/promotions/"
+      acceptance_checks:
+        - "Crear promo 20% early bird -> rate final = rate * 0.8"
+        - "Stacking: dos promos no-stackable -> solo aplica la mayor"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WAVE 5: PLATAFORMA (Semanas 8-14)
+  # Dependencias: CORE-04, CORE-05, EXP-01, EXP-02
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: "PLAT-01"
+    title: "Admin panel: gestión de hoteles, logs, monitoreo"
+    description: >
+      Consola de administración del sistema (solo super_admin):
+      1. Lista de hoteles: tabla con nombre, slug, plan, status, habitaciones,
+         fecha registro, última actividad. Filtros: por plan, status, fecha.
+         Acciones: editar, desactivar, cambiar plan, ver dashboard.
+      2. Detalle hotel: info general, usuarios, configuración, métricas
+         (ocupación, ADR, RevPAR últimos 30d), audit logs, plan actual.
+      3. Audit logs: tabla con correlationId, acción, recurso, usuario,
+         fecha. Filtros por hotel, acción, fecha. Paginación cursor.
+      4. System health: dashboard con status DB, Redis, colas BullMQ,
+         última sincronización OTA, errores recientes.
+         Redis info: memory used, hit rate, keys count.
+         BullMQ: jobs waiting, active, failed, completed (última hora).
+      5. Usuarios: lista todos los usuarios del sistema. Búsqueda por
+         email, hotel. Roles. Desactivar usuarios.
+      Output: Admin module completo (API + UI).
+    wave: 5
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["CORE-04", "CORE-05", "EXP-02"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["Next.js 15", "NestJS 11", "Tailwind CSS 4", "Recharts"]
+    acceptance_criteria:
+      - "Lista hoteles con filtros: plan, status, fecha registro"
+      - "Detalle hotel: info, usuarios, métricas 30d, audit logs"
+      - "Audit logs: tabla con filtros, paginación cursor"
+      - "System health: status DB, Redis, BullMQ, última sync OTA"
+      - "Usuarios: lista, búsqueda, cambio de rol"
+    handoff:
+      do_not_reinvestigate:
+        - "Admin routes protegidas con SUPER_ADMIN role"
+        - "Audit logs API con paginación cursor"
+      target_files:
+        - "apps/api/src/admin/"
+        - "apps/web/src/app/admin/"
+      acceptance_checks:
+        - "Acceso admin: solo super_admin puede acceder"
+        - "Lista hoteles: 2 hoteles demo visibles"
+
+  - id: "PLAT-02"
+    title: "Sistema de tiers simplificado + flag Founders"
+    description: >
+      Implementar sistema de planes con feature flags simplificados:
+      1. Feature flags hardcoded (no sistema complejo). Objeto config:
+         const PLAN_FEATURES = {
+           free: { maxRooms: 5, maxChannels: 1, syncInterval: 30, whatsapp: true,
+                   dynamicPricing: false, promotions: 0, apiAccess: false },
+           founders: { maxRooms: 999, maxChannels: 999, syncInterval: 0,
+                       whatsapp: true, dynamicPricing: true, promotions: 999,
+                       apiAccess: true },
+           micro: { maxRooms: 10, maxChannels: 2, syncInterval: 0, ... },
+           ...
+         };
+      2. PlanGuard: @UseGuards(PlanGuard) @Plan('whatsapp') verifica
+         que el plan del hotelero tiene acceso al feature.
+         Si no -> 403 Forbidden + mensaje "Actualiza tu plan para
+         acceder a WhatsApp."
+      3. Founders flag: campo is_founder en Hotel. 6 meses de funcionalidad
+         completa. A los 5 meses: notificación automática por WhatsApp
+         "Tu plan Founders termina en 30 días. Elige tu plan:
+         Micro ($80K), Starter ($160K), o conserva Free con limitaciones."
+      4. Upgrade flow: PATCH /api/v1/hotel/plan con validación de pago.
+         Preservar datos al cambiar plan. No downtime.
+      5. Sync interval: BullMQ job schedule con interval configurable.
+         Free: cada 30 min. Paid: tiempo real (job cada 1 min, pero
+         push inmediato en evento). Implementar en ChannelSyncService.
+      Output: Plan module con feature flags, guards, upgrade flow.
+    wave: 5
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["FND-04", "CORE-02", "EXP-01"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["NestJS 11", "BullMQ"]
+    acceptance_criteria:
+      - "Feature flags hardcoded: 7 planes con límites definidos"
+      - "PlanGuard: 403 si plan no tiene acceso al feature"
+      - "Founders: is_founder=true, 6 meses full access"
+      - "Notificación Founders a los 5 meses: WhatsApp template"
+      - "Upgrade flow: PATCH /hotel/plan preserva datos"
+      - "Sync interval: free=30min, paid=tiempo real"
+    handoff:
+      do_not_reinvestigate:
+        - "PLAN_FEATURES config en common/plans.ts"
+        - "PlanGuard implementado con feature check"
+        - "Founders flag + notificación 30 días antes"
+      target_files:
+        - "apps/api/src/plans/"
+        - "apps/api/src/common/guards/plan.guard.ts"
+      acceptance_checks:
+        - "Hotel free: intenta crear 6to room type -> 403"
+        - "Hotel founders: crea 100 rooms -> 200 OK"
+        - "Notificación Founders: job checkea hoteles con is_founder=true y 5 meses"
+
+  - id: "PLAT-03"
+    title: "Facturación DIAN: integración proveedor facturación electrónica"
+    description: >
+      Integrar con proveedor de facturación electrónica colombiano:
+      1. Evaluar proveedores: Xubio (API REST), Siigo (API SOAP/REST),
+         Alegra (API REST). Decisión basada en: documentación, sandbox,
+         costos ($10-50/mes), soporte suscripciones recurrentes.
+      2. Facturación recurrente: generar factura electrónica DIAN cada
+         mes por suscripción del hotel. Datos: NIT hotel, régimen
+         (simplificado/común), items (plan contratado + add-ons), IVA 19%.
+      3. Webhook de pago: cuando pago es confirmado (Nequi, PSE, Stripe),
+         generar factura y enviar por email + WhatsApp al hotelero.
+      4. Nota crédito: si cancelación de plan o ajuste, generar nota
+         crédito DIAN.
+      5. Reporte DIAN: exportar facturas del mes para declaración del
+         hotelero. CSV con formato DIAN.
+      Output: Billing module + integración proveedor DIAN.
+    wave: 5
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["EXP-01", "PLAT-02"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["NestJS 11", "BullMQ", "Proveedor API DIAN"]
+    acceptance_criteria:
+      - "Factura DIAN generada al confirmar pago de suscripción"
+      - "Webhook de pago: webhook -> factura -> email + WhatsApp"
+      - "Nota crédito: ajuste/cancelación genera documento DIAN"
+      - "Reporte DIAN: CSV export con facturas del mes"
+      - "IVA 19% incluído en factura"
+    handoff:
+      do_not_reinvestigate:
+        - "Proveedor DIAN seleccionado (evaluación en docs/decisions/)"
+        - "API credentials en secrets"
+      target_files:
+        - "apps/api/src/billing/"
+      acceptance_checks:
+        - "Webhook pago -> factura PDF generada"
+        - "Factura enviada por email + WhatsApp"
+
+  - id: "PLAT-04"
+    title: "Help Desk / Soporte integrado con WhatsApp"
+    description: >
+      Sistema de tickets de soporte con WhatsApp como canal principal:
+      1. Ticket creation: desde dashboard (botón "Ayuda" siempre visible)
+         o desde WhatsApp (webhook recibe mensaje, crea ticket automático).
+         Asunto: "Necesito ayuda con..." Categoría: Técnico, Facturación,
+         Capacitación, Otro. Prioridad: Baja, Media, Alta, Urgente.
+      2. Cola de tickets: tabla con id, hotel, asunto, categoría,
+         prioridad, status (OPEN, IN_PROGRESS, WAITING_HOTEL, RESOLVED,
+         CLOSED), creado, última actualización.
+      3. Respuestas: agente responde desde admin panel -> se envía por
+         WhatsApp al hotelero. Hotelero responde por WhatsApp -> se
+         añade al ticket. Todo el historial visible en el ticket.
+      4. SLA: Urgente <1h, Alta <4h, Media <24h, Baja <72h.
+         Escalamiento si SLA se viola: notificar a super_admin.
+      5. Base de conocimiento: sección FAQ en la PWA con artículos:
+         "Cómo conectar Booking.com", "Cómo cambiar tarifas",
+         "Solución a problemas comunes". Búsqueda full-text.
+      Output: Support module con tickets + WhatsApp + FAQ.
+    wave: 5
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["EXP-01", "PLAT-01"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: true
+    tech_stack: ["NestJS 11", "Next.js 15", "WhatsApp Cloud API", "Tailwind CSS 4"]
+    acceptance_criteria:
+      - "Botón 'Ayuda' en dashboard -> crea ticket + WhatsApp"
+      - "WhatsApp entrante -> crea ticket automáticamente"
+      - "Admin responde ticket -> WhatsApp al hotelero"
+      - "SLAs: Urgente <1h, Alta <4h, Media <24h, Baja <72h"
+      - "FAQ: 5+ artículos con búsqueda full-text"
+    handoff:
+      do_not_reinvestigate:
+        - "WhatsApp webhook integrado con tickets"
+        - "FAQ content en markdown en support/faq/"
+      target_files:
+        - "apps/api/src/support/"
+        - "apps/web/src/app/support/"
+        - "apps/web/src/app/faq/"
+      acceptance_checks:
+        - "Crear ticket desde dashboard -> WhatsApp: hemos recibido tu caso #123"
+        - "Responder ticket desde admin -> WhatsApp: respuesta llega al hotelero"
+
+  - id: "PLAT-05"
+    title: "Plan de contingencia: fallos Fly.io, Neon, Upstash"
+    description: >
+      Documentar y preparar plan de contingencia:
+      1. Si Fly.io cae: tener Dockerfile listo para deploy en Render
+         (Web Service Pro $7/mes). Script de deploy: fly deploy alternativo
+         a render.yaml. DNS: cambiar CNAME Cloudflare a Render.
+         Tiempo: <30 min manual.
+      2. Si Neon falla: pg_dump diario listo. Restore en Render PostgreSQL
+         ($7/mes). DATABASE_URL swap en variables de entorno.
+         Tiempo: <30 min restore + redeploy.
+      3. Si Upstash falla: Redis local en Fly.io (pequeño volumen).
+         Configuración: REDIS_URL apunta a localhost si Upstash caído.
+         Degradado: sin rate limiting, sin caché (PostgreSQL directo).
+      4. Si WhatsApp API falla: fallback a email. Template de email
+         con mismo contenido que WhatsApp.
+      5. Data loss scenario: restore desde último pg_dump + replay de
+         eventos BullMQ (logs de acciones desde último backup).
+      Output: docs/contingency-plan.md con scripts y playbooks.
+    wave: 5
+    agent: "gem-devops"
+    status: pending
+    dependencies: ["FND-01", "FND-03"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    acceptance_criteria:
+      - "render.yaml listo para deploy alternativo"
+      - "Script de restore PostgreSQL desde pg_dump probado"
+      - "Config Redis local en Fly.io como fallback Upstash"
+      - "Template email de emergencia si WhatsApp caído"
+      - "Playbook: pasos numbered para cada escenario de fallo"
+    handoff:
+      do_not_reinvestigate:
+        - "render.yaml configurado para deploy alternativo"
+        - "Scripts de contingencia en scripts/contingency/"
+      target_files:
+        - "docs/operations/contingency-plan.md"
+        - "render.yaml"
+        - "scripts/contingency/"
+      acceptance_checks:
+        - "render.yaml existe y es deployable"
+        - "Script de restore: carga backup.sql.gz en <10 min"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WAVE 6: TESTING & CALIDAD (Semanas 1-16, continua)
+  # Corre en paralelo a Waves 1-5
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: "TST-01"
+    title: "Tests unitarios con Jest (core services)"
+    description: >
+      Implementar tests unitarios para todos los servicios core.
+      Corre en CI en cada PR. Cobertura target: >80%.
+      NO es una tarea separada de implementación — los tests se
+      escriben junto con cada módulo. Este task define el framework
+      y estándares:
+      1. Config Jest: jest.config.ts con collectCoverage, coverageThreshold
+         (80% statements, 75% branches). Módulos: ts-jest.
+      2. Test pattern: *.spec.ts junto al archivo que prueba.
+         Describe blocks: service, método, escenario (happy path + edge).
+      3. Mocks: jest.mock para Prisma, Redis, BullMQ, HTTP clients.
+      Output: jest.config.ts + tests para módulos implementados.
+    wave: 6
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["FND-02"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["Jest", "ts-jest"]
+    acceptance_criteria:
+      - "Jest config: coverage thresholds 80%/75%"
+      - "Tests unitarios para AvailabilityService, BookingService, RateService"
+      - "Tests en CI en cada PR"
+      - "Coverage report en PR comment"
+    handoff:
+      do_not_reinvestigate:
+        - "Jest config con coverage thresholds"
+        - "Test patterns: .spec.ts junto al archivo fuente"
+      target_files:
+        - "apps/api/jest.config.ts"
+        - "apps/api/src/**/*.spec.ts"
+      acceptance_checks:
+        - "npx jest --coverage -> statements >=80%"
+
+  - id: "TST-02"
+    title: "Tests de integración con Supertest (API endpoints)"
+    description: >
+      Tests de integración que prueban API endpoints contra
+      base de datos de prueba (PostgreSQL + Redis):
+      1. Config: test database en Neon (DB separada: hotel_test).
+         Test Redis en Upstash (DB index 1).
+         beforeAll: ejecutar migraciones + seed. afterAll: cleanup.
+      2. Endpoints a testear: auth (register, login, forgot-password),
+         availability (GET bulk, PATCH inventory),
+         booking (POST, GET, cancel), rates (CRUD),
+         webhooks OTA (receive + HMAC validation).
+      3. Cada test: setup data -> HTTP request -> assert response
+         + assert DB state + assert side effects (email, WhatsApp mock).
+         Usar Supertest: request(app).post('/api/v1/auth/login').
+      Output: tests de integración en tests/integration/.
+    wave: 6
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["CORE-01", "FND-04"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["Supertest", "Jest", "NestJS testing"]
+    acceptance_criteria:
+      - "Test DB separada: hotel_test en Neon"
+      - "Tests: auth (3), availability (5), booking (5), rates (3), webhooks (2)"
+      - "Cada test verifica HTTP + DB state + side effects"
+      - "beforeAll: migrate + seed. afterAll: cleanup"
+    handoff:
+      do_not_reinvestigate:
+        - "Test database config en .env.test"
+        - "NestJS testing module en tests/utils/"
+      target_files:
+        - "apps/api/tests/integration/"
+      acceptance_checks:
+        - "npx jest tests/integration/ -> todos pasan"
+
+  - id: "TST-03"
+    title: "Mock OTA server para pruebas de conectores"
+    description: >
+      Servidor mock que simula APIs de Booking.com y Despegar
+      para pruebas de conectores sin depender de OTAs reales:
+      1. Mock server con Express o NestJS lightweight:
+         - Booking mock: /mock/booking/availability (GET), /mock/booking/ari (POST),
+           /mock/booking/webhook (POST). Respuestas simuladas con datos realistas.
+         - Despegar mock: /mock/despegar/rates (POST), /mock/despegar/bookings (GET).
+      2. Escenarios: success, rate limit (429), timeout (>5s), bad request (400),
+         server error (500), partial failure (algunos rates OK, otros no).
+      3. Stateful: el mock mantiene estado en memoria. Push ARI -> GET availability
+         refleja el cambio. Útil para tests de reconciliación.
+      4. Correr en CI como servicio separado. Puerto 3001.
+         Configuración de conectores: BOOKING_API_URL=https://mock:3001/mock/booking
+      Output: Mock server en tests/mock-ota/.
+    wave: 6
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["OTA-03"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["Express", "TypeScript"]
+    acceptance_criteria:
+      - "Mock Booking: availability GET, ARI POST, webhook POST"
+      - "Mock Despegar: rates POST, bookings GET"
+      - "Escenarios: 200, 429, 500, timeout, partial failure"
+      - "Stateful: push -> GET refleja cambio"
+      - "Corre en CI como servicio separado"
+    handoff:
+      do_not_reinvestigate:
+        - "Mock server endpoints coinciden con OTAs reales"
+        - "Escenarios de falla: 429, 500, timeout, partial"
+      target_files:
+        - "apps/api/tests/mock-ota/"
+      acceptance_checks:
+        - "POST /mock/booking/ari -> GET /mock/booking/availability refleja cambio"
+        - "Rate limit test: 10 requests en 1s -> 429"
+
+  - id: "TST-04"
+    title: "Tests de sincronización offline"
+    description: >
+      Tests del ciclo offline -> online:
+      1. Service Worker mock: simular navegador offline/online.
+         Service Worker no disponible en Node -> usar pruebas
+         de integración con indexedDB mock (fake-indexeddb).
+      2. Escenarios:
+         a. Hotelero crea reserva offline -> se guarda en IndexedDB
+         b. Vuelve conexión -> Background Sync -> POST a API
+         c. Reserva offline exitosa -> inventario local actualizado
+         d. Conflicto: inventario local desactualizado -> last-write-wins
+         e. Sin conexión por 24h -> cola de pendientes con alerta
+      3. API conflict resolution test: testear que si 2 dispositivos
+         offline hacen cambios diferentes, el servidor resuelve
+         correctamente.
+      Output: Tests de sincronización offline/online.
+    wave: 6
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["CORE-03"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["Jest", "fake-indexeddb", "msw (Service Worker mock)"]
+    acceptance_criteria:
+      - "Test: crear reserva offline -> IndexedDB guarda"
+      - "Test: reconectar -> POST a API"
+      - "Test: conflicto offline -> last-write-wins"
+      - "Test: 24h offline -> alerta de cola pendiente"
+    handoff:
+      do_not_reinvestigate:
+        - "fake-indexeddb for Node tests"
+        - "MSW para mock de Service Worker"
+      target_files:
+        - "apps/web/tests/offline/"
+      acceptance_checks:
+        - "Test offline -> online -> data consistente"
+
+  - id: "TST-05"
+    title: "Load tests con k6: availability, booking, OTA sync"
+    description: >
+      Pruebas de carga para validar SLAs:
+      1. k6 scripts: scenarios/availability.js, scenarios/booking.js,
+         scenarios/ota-sync.js, scenarios/mixed.js.
+      2. Escenarios:
+         a. Availability: 100 usuarios concurrentes consultando
+            disponibilidad (ramp-up 30s, hold 60s). SLA: p99 <200ms.
+         b. Booking: 10 reservas/segundo concurrentes (simulando
+            múltiples OTAs). SLA: 0% errores, p99 <2s.
+         c. Redis cache miss: deshabilitar cache forzado, medir
+            degradación. SLA: p99 <1s (PostgreSQL directo).
+         d. Mixed: 80% reads, 20% writes (patrón realhotelero).
+      3. Report: percentiles (p50, p95, p99), error rate, throughput.
+         k6 dashboard: HTML report con gráficos.
+      4. CI: load tests opcionales (no bloquean PR). Trigger manual
+         antes de release.
+      Output: k6 scripts + HTML report template.
+    wave: 6
+    agent: "gem-devops"
+    status: pending
+    dependencies: ["CORE-02", "FND-01"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["k6", "JavaScript"]
+    acceptance_criteria:
+      - "k6 scripts: availability, booking, ota-sync, mixed"
+      - "100 concurrentes availability -> p99 <200ms"
+      - "10 bookings/s -> 0% errores, p99 <2s"
+      - "Cache miss -> p99 <1s (PostgreSQL directo)"
+      - "HTML report con percentiles y gráficos"
+    handoff:
+      do_not_reinvestigate:
+        - "k6 scripts en tests/load/"
+        - "URLs de prueba: staging environment"
+      target_files:
+        - "apps/api/tests/load/"
+      acceptance_checks:
+        - "k6 run tests/load/availability.js -> p99 <200ms"
+
+  - id: "TST-06"
+    title: "Tests de seguridad: auth, rate limiting, RLS isolation"
+    description: >
+      Pruebas de seguridad automatizadas:
+      1. Auth tests:
+         a. JWT expirado -> 401
+         b. JWT firmado con key incorrecta -> 401
+         c. Refresh token expirado -> 401
+         d. Password reset token usado 2 veces -> 400
+         e. Rate limit login: 6to intento en 1 min -> 429
+      2. RLS isolation tests:
+         a. Hotel A intenta acceder inventory de Hotel B -> 403 o empty
+         b. Usuario staff intenta acción admin -> 403
+         c. Hotel free intenta crear habitación #6 -> 403
+      3. API key tests:
+         a. Request sin API key -> 401
+         b. API key inválida -> 401
+         c. API key expirada -> 401
+      4. OTA webhook tests:
+         a. HMAC inválido -> 401
+         b. Replay attack (mismo idempotency_key) -> 409
+         c. Payload malformed -> 400
+      Output: Security tests suite.
+    wave: 6
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["FND-04", "CORE-01"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["Jest", "Supertest"]
+    acceptance_criteria:
+      - "Auth: 5 tests (JWT expired, bad key, refresh expired, reset token reuse, rate limit)"
+      - "RLS: 3 tests (cross-tenant access, role escalation, plan limit)"
+      - "API key: 3 tests (missing, invalid, expired)"
+      - "Webhook: 3 tests (HMAC, replay, malformed)"
+    handoff:
+      do_not_reinvestigate:
+        - "Security test scenarios documentados"
+      target_files:
+        - "apps/api/tests/security/"
+      acceptance_checks:
+        - "npx jest tests/security/ -> todos pasan"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WAVE 7: BETA (Semanas 12-16)
+  # Dependencias: Waves 2-5 completas
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: "BETA-01"
+    title: "Onboarding presencial: 10 hoteles en Tolú y Coveñas"
+    description: >
+      Preparar y ejecutar onboarding presencial de hoteles Founders:
+      1. Material: guía impresa A4 (pasos numbered con screenshots),
+         video tutorial precargado en tablets, stickers con QR a la PWA.
+      2. Preparar PWA: crear cuentas para los 10 hoteles Founders con
+         flag founders=true. Precargar datos básicos: nombre hotel,
+         número habitaciones, tarifas iniciales.
+      3. Visita presencial: instalar PWA en celular del recepcionista.
+         Configurar habitaciones juntos. Mostrar cómo marcar ocupado.
+         Primera reserva de prueba.
+      4. Checklist onboarding: [ ] PWA instalada, [ ] Habitaciones
+         configuradas, [ ] Tarifas básicas, [ ] WhatsApp conectado,
+         [ ] Booking conectado (vía puente), [ ] Primera reserva completa.
+      5. Feedback: encuesta post-onboarding (3 preguntas: "¿Fue fácil?
+         ¿Qué mejorarías? ¿Recomendarías a otro hotel?")
+      Output: 10 hoteles onboarded con checklist completo.
+    wave: 7
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["CORE-03", "EXP-03", "OTA-05"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    acceptance_criteria:
+      - "10 hoteles Founders: cuentas creadas, flag founders=true"
+      - "Guía onboarding impresa + video tutorial precargado"
+      - "Checklist: 6 items por hotel completados"
+      - "Encuesta post-onboarding: 3 preguntas respondidas"
+    handoff:
+      do_not_reinvestigate:
+        - "Founders list: 10 hoteles con datos completos"
+        - "Onboarding checklist template"
+      target_files:
+        - "docs/operations/beta-onboarding-checklist.md"
+      acceptance_checks:
+        - "10/10 hoteles con checklist completado"
+
+  - id: "BETA-02"
+    title: "Feedback loop: canal de reporte semanal + mejoras rápidas"
+    description: >
+      Establecer canal de feedback con hoteleros beta:
+      1. Reunión semanal: cada viernes, llamada grupal WhatsApp o
+         individual con cada hotelero. Temas: qué funcionó, qué no,
+         qué feature necesitan.
+      2. Feedback tracker: tabla en Notion o Google Sheets con:
+         hotel, fecha, feedback, prioridad, status, fecha implementación.
+      3. Ciclo rápido: bugs críticos se arreglan en <24h. Features
+         pequeñas en <1 semana. Features grandes -> backlog.
+      4. Reporte semanal auto-generado: métricas de uso de cada
+         hotelero (reservas creadas, veces que abrió la app,
+         veces que usó WhatsApp, tiempo offline).
+      5. Grupo WhatsApp de Founders: canal directo de comunicación.
+         Anuncios de actualizaciones, tips, pedir feedback.
+      Output: Feedback loop operativo + reportes semanales.
+    wave: 7
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["EXP-01", "BETA-01"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    acceptance_criteria:
+      - "Reunión semanal con cada hotelero Founders"
+      - "Feedback tracker: feedback, prioridad, status"
+      - "Bug crítico: fix en <24h"
+      - "Feature pequeña: implementación en <1sem"
+      - "Reporte semanal auto-generado: métricas de uso"
+    handoff:
+      do_not_reinvestigate:
+        - "Feedback tracker link"
+        - "Founders WhatsApp group creado"
+      target_files:
+        - "docs/operations/feedback-loop.md"
+      acceptance_checks:
+        - "Feedback tracker con entradas de los 10 hoteles"
+
+  - id: "BETA-03"
+    title: "Bug fixes batch + polish post-feedback"
+    description: >
+      Batch de correcciones basadas en feedback de beta:
+      1. Bugs críticos (prioridad inmediata): overbooking no detectado,
+         WhatsApp no envía, sync OTA roto, login falla.
+      2. Bugs altos: datos incorrectos en dashboard, rate no se guarda,
+         offline sync conflictos, UI rota en Android específico.
+      3. UX feedback: botones muy pequeños, texto ilegible, flow
+         confuso, términos no entendidos.
+      4. Performance: lentitud en dashboard, carga inicial lenta,
+         WebSocket desconecta, Redis cache miss alto.
+      5. Cada fix: test unitario que reproduce el bug -> fix ->
+         test pasa. Commit con mensaje claro.
+      Output: Fixes implementados + tests que los verifican.
+    wave: 7
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["BETA-02"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["NestJS", "Next.js", "Jest"]
+    acceptance_criteria:
+      - "Bugs críticos: fix en <24h"
+      - "Cada fix tiene test que reproduce el bug"
+      - "UX feedback: mejoras implementadas en UI"
+      - "Performance: dashboard carga <2s (antes: medir baseline)"
+    handoff:
+      do_not_reinvestigate:
+        - "Feedback tracker con bugs reportados"
+      target_files:
+        - "apps/api/src/**/*.ts (fixes)"
+        - "apps/web/src/**/*.tsx (fixes)"
+      acceptance_checks:
+        - "Tests de regresión: npx jest -> todos pasan"
+
+  - id: "BETA-04"
+    title: "Transition plan Founders: 30 días de gracia"
+    description: >
+      Preparar transición de Founders a plan pago:
+      1. Job semanal: checkea hoteles con is_founder=true y
+         5 meses desde created_at. Enviar WhatsApp template:
+         "Tu plan Founders termina en 30 días. Elige tu plan:
+         - Micro ($80K/mes): 10 hab, 2 canales, WhatsApp
+         - Starter ($160K/mes): 20 hab, 3 canales, promos
+         - Conserva Free: 5 hab, 1 canal, sync 30 min"
+      2. Si el hotelero no elige plan en 30 días: degradar a Free
+         automáticamente. Preservar datos históricos.
+         Enviar WhatsApp: "Tu plan ha sido cambiado a Free.
+         Puedes upgradear en cualquier momento desde Configuración."
+      3. 30 días de gracia: durante el período de gracia, el hotelero
+         conserva todas las funcionalidades. Al día 31, aplicar
+         límites del plan seleccionado (o Free).
+      4. Descuento vitalicio: Founders que migren a pago conservan
+         precio congelado (no aplican aumentos futuros).
+      Output: Transition jobs + templates WhatsApp + graceful degradation.
+    wave: 7
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["PLAT-02", "BETA-01"]
+    conflicts_with: []
+    flags:
+      requires_design_validation: false
+    tech_stack: ["NestJS", "BullMQ"]
+    acceptance_criteria:
+      - "Job semanal: detecta Founders +30 días, envía WhatsApp"
+      - "30 días de gracia: funcionalidad completa preservada"
+      - "Degradación automática: Free si no elige plan"
+      - "Datos históricos preservados después de degradar"
+      - "Descuento vitalicio: precio congelado para Founders"
+    handoff:
+      do_not_reinvestigate:
+        - "WhatsApp templates para transition (3 templates)"
+        - "Grace period: 30 días con full access"
+      target_files:
+        - "apps/api/src/plans/transition.job.ts"
+      acceptance_checks:
+        - "Job detecta Founder con 5 meses -> WhatsApp enviado"
+        - "Día 31 sin elección -> plan = FREE, datos intactos"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # PHASE 2: Post-MVP (Futuro, no incluído en waves 0-7)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: "FUT-01"
+    title: "Migrar de OpenWA a WhatsApp Business API oficial"
+    description: >
+      Cuando el flujo de caja lo permita, migrar de OpenWA (self-hosted, riesgo
+      de baneo) a WhatsApp Business API oficial de Meta. La migración es
+      transparente gracias al WhatsAppAdapter pattern (FND-06).
+      Pasos:
+      1. Crear cuenta Meta Business + registrar número empresarial
+      2. Obtener Access Token + Phone Number ID
+      3. Implementar BusinessAPIProvider usando WhatsAppAdapter interface
+      4. Migrar sesiones una por una: abrir sesión en Meta, cerrar en OpenWA
+      5. Monitorear: comparar deliverability entre ambos proveedores
+    wave: 99
+    agent: "gem-implementer"
+    status: backlog
+    dependencies: []
+    conflicts_with: []
+    acceptance_criteria:
+      - "BusinessAPIProvider implementa WhatsAppAdapter interface"
+      - "Mensajes enviados vía API oficial con templates aprobados"
+      - "100% de sesiones migradas sin pérdida de mensajes"
+      - "Rollback plan: volver a OpenWA si hay problemas con Meta"

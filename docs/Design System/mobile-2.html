@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HotelManager · Panel móvil</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="components.css" />
+  <link rel="stylesheet" href="mobile.css" />
+</head>
+<body>
+  <div class="stage">
+    <div class="stage__caption">mobile-2 · <strong>Dashboard móvil</strong></div>
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="status-bar__icons">
+          <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><path d="M1 9h2V5H1zM5 9h2V3H5zM9 9h2V1H9zM13 9h2V-3h-2z"/></svg>
+          <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><path d="M7 3.5L1 7v2h12V7L7 3.5z"/></svg>
+          <svg width="20" height="10" viewBox="0 0 20 10" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="0.5" y="0.5" width="16" height="9" rx="2"/><rect x="2" y="2" width="11" height="6" rx="1" fill="currentColor"/><rect x="17.5" y="3" width="1.5" height="4" fill="currentColor"/></svg>
+        </div>
+      </div>
+
+      <div class="screen">
+        <div class="scroll scroll--tight">
+          <div class="greet">
+            <div>
+              <div class="greet__hello">Sábado, 15 de junio</div>
+              <div class="greet__name">Buenos días, José</div>
+            </div>
+            <div class="greet__avatar">JJ</div>
+          </div>
+
+          <div class="hero-card">
+            <div class="hero-card__label">OCUPACIÓN DE HOY</div>
+            <div class="hero-card__title">
+              28 / 30
+              <small>93% de habitaciones ocupadas · +12% vs ayer</small>
+            </div>
+            <div class="hero-card__metrics">
+              <div>
+                <div class="hero-card__metric-label">Check-ins</div>
+                <div class="hero-card__metric-value">12</div>
+              </div>
+              <div>
+                <div class="hero-card__metric-label">Salidas</div>
+                <div class="hero-card__metric-value">7</div>
+              </div>
+              <div>
+                <div class="hero-card__metric-label">Ingresos</div>
+                <div class="hero-card__metric-value">$4.2M</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-row">
+            <a href="mobile-3.html" class="action-tile">
+              <span class="action-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></span>
+              Reservas
+            </a>
+            <a href="mobile-5.html" class="action-tile">
+              <span class="action-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg></span>
+              Check-in
+            </a>
+            <a href="mobile-4.html" class="action-tile">
+              <span class="action-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 18V8l9-5 9 5v10M9 21v-6h6v6"/></svg></span>
+              Habitaciones
+            </a>
+            <a href="mobile-6.html" class="action-tile">
+              <span class="action-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M7 14l4-4 4 4 5-5"/></svg></span>
+              Reportes
+            </a>
+          </div>
+
+          <section class="m-section">
+            <div class="m-section__head">
+              <h2 class="m-section__title">Actividad reciente</h2>
+              <a href="#" class="m-section__action">Ver todo</a>
+            </div>
+            <div class="timeline">
+              <div class="timeline__item">
+                <div class="timeline__icon timeline__icon--checkin">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+                </div>
+                <div>
+                  <div class="timeline__title">Check-in · María López</div>
+                  <div class="timeline__sub">Habitación 305 · 2 noches</div>
+                </div>
+                <div class="timeline__time">9:32</div>
+              </div>
+              <div class="timeline__item">
+                <div class="timeline__icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+                <div>
+                  <div class="timeline__title">Pago recibido · $1.245.000</div>
+                  <div class="timeline__sub">PSE · Carlos Ramírez</div>
+                </div>
+                <div class="timeline__time">8:54</div>
+              </div>
+              <div class="timeline__item">
+                <div class="timeline__icon timeline__icon--clean">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 11l-4 4-4-4M12 3v12"/></svg>
+                </div>
+                <div>
+                  <div class="timeline__title">Habitación 112 lista</div>
+                  <div class="timeline__sub">Limpieza completada</div>
+                </div>
+                <div class="timeline__time">8:10</div>
+              </div>
+              <div class="timeline__item">
+                <div class="timeline__icon timeline__icon--alert">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0z"/></svg>
+                </div>
+                <div>
+                  <div class="timeline__title">Mantenimiento 207</div>
+                  <div class="timeline__sub">Aire acondicionado reportado</div>
+                </div>
+                <div class="timeline__time">7:45</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="m-section">
+            <div class="m-section__head">
+              <h2 class="m-section__title">Próximos check-ins</h2>
+              <a href="mobile-3.html" class="m-section__action">Ver todos</a>
+            </div>
+            <div class="res-list">
+              <a href="mobile-5.html" class="res-row">
+                <div class="res-row__avatar">ML</div>
+                <div class="res-row__body">
+                  <div class="res-row__name">María López Restrepo</div>
+                  <div class="res-row__meta">
+                    <span>14:30</span>
+                    <span class="res-row__meta-dot"></span>
+                    <span>Hab. 305</span>
+                    <span class="res-row__meta-dot"></span>
+                    <span>2 huéspedes</span>
+                  </div>
+                </div>
+                <div class="res-row__right">
+                  <div class="res-row__amount">$1.245.000</div>
+                  <span class="badge badge--info"><span class="badge__dot"></span>OK</span>
+                </div>
+              </a>
+              <a href="mobile-5.html" class="res-row">
+                <div class="res-row__avatar" style="background:linear-gradient(135deg,var(--terracota-500),var(--terracota-600))">CR</div>
+                <div class="res-row__body">
+                  <div class="res-row__name">Carlos Ramírez Pérez</div>
+                  <div class="res-row__meta">
+                    <span>15:00</span>
+                    <span class="res-row__meta-dot"></span>
+                    <span>Hab. 204</span>
+                    <span class="res-row__meta-dot"></span>
+                    <span>1 huésped</span>
+                  </div>
+                </div>
+                <div class="res-row__right">
+                  <div class="res-row__amount">$680.000</div>
+                  <span class="badge badge--pending"><span class="badge__dot"></span>Pte</span>
+                </div>
+              </a>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <nav class="bottom-nav">
+        <a class="bottom-nav__item bottom-nav__item--active" href="mobile-2.html">
+          <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>
+          Panel
+        </a>
+        <a class="bottom-nav__item" href="mobile-3.html">
+          <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></span>
+          Reservas
+        </a>
+        <a class="bottom-nav__item" href="mobile-4.html">
+          <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 18V8l9-5 9 5v10M9 21v-6h6v6"/></svg></span>
+          Habitaciones
+        </a>
+        <a class="bottom-nav__item" href="mobile-5.html">
+          <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          Huéspedes
+        </a>
+        <a class="bottom-nav__item" href="mobile-6.html">
+          <span class="bottom-nav__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M7 14l4-4 4 4 5-5"/></svg></span>
+          Reportes
+        </a>
+      </nav>
+
+      <div class="home-indicator"><div class="home-indicator__bar"></div></div>
+    </div>
+  </div>
+</body>
+</html>

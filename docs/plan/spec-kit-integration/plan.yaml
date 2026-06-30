@@ -1,0 +1,489 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# PLAN: Spec Kit ↔ gem-team Integration
+# Objective: Integrar Spec Kit (GitHub's Spec-Driven Development toolkit)
+#   con gem-team (orquestador multi-agente) en un flujo unificado.
+# ═══════════════════════════════════════════════════════════════════════════
+plan_id: "spec-kit-integration"
+objective: >
+  Integración FULL entre Spec Kit y gem-team en E:\Proyecto Hoteles:
+  instalar specify CLI, inicializar proyecto Spec Kit con integración
+  opencode nativa, crear .gem-team.yaml, documentar integración en
+  AGENTS.md, crear skills/hooks, y verificar funcionamiento.
+created_at: "2026-06-27T12:00:00Z"
+created_by: "gem-planner"
+status: pending
+tldr: >
+  Este plan instala y configura Spec Kit (specify CLI) en un proyecto
+  vacío, aprovechando la integración opencode YA EXISTENTE en Spec Kit
+  (src/specify_cli/integrations/opencode/). Luego crea la capa de
+  orquestación gem-team (.gem-team.yaml + skills + context bridge)
+  para que gem-team pueda leer artifacts de Spec Kit (.specify/memory/,
+  specs/<feature>/plan.md, specs/<feature>/tasks.md) y mapearlos a sus
+  fases nativas (Phase 0→Init, Phase 2→Planning, Phase 3→Execution).
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PLAN METRICS
+# ═══════════════════════════════════════════════════════════════════════════
+plan_metrics:
+  wave_1_task_count: 2
+  total_dependencies: 12
+  risk_score: medium
+
+quality_warnings:
+  - "specify init --integration opencode ya existe en Spec Kit v0.11.10, pero no se ha validado en Windows con opencode local"
+  - "El formato exacto de .gem-team.yaml es inferido del contexto de gem-team (no hay especificación oficial disponible)"
+  - "Los skills/hooks requieren que opencode soporte el mecanismo de skills (verificar en opencode.json)"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PLANNING ANALYSIS (MEDIUM complexity)
+# ═══════════════════════════════════════════════════════════════════════════
+open_questions:
+  - question: "¿specify init . --integration opencode funciona correctamente en Windows con uv tool install?"
+    context: "Spec Kit soporta opencode como integración built-in. Hay que verificar que los comandos se instalen en .opencode/commands/ y que opencode los reconozca."
+    type: decision_blocker
+    affects: ["SK-INIT", "SK-VERIFY"]
+  - question: "¿Cuál es el schema exacto de .gem-team.yaml?"
+    context: "No existe documentación pública del schema. Se usará el formato inferido de la descripción del orquestador: phases, agents, context_sources, artifact_routes."
+    type: decision_blocker
+    affects: ["SK-GEMTEAM-CONFIG"]
+  - question: "¿opencode soporta skills/subagentes ejecutables via plugin superpowers?"
+    context: "El usuario tiene superpowers plugin instalado. Los skills de Spec Kit podrían implementarse como comandos .md en .opencode/commands/ o como subagentes."
+    type: decision_blocker
+    affects: ["SK-SKILLS"]
+
+assumptions:
+  - "Spec Kit v0.11.10 (último dev) se instalará correctamente vía uv tool install desde git+https://github.com/github/spec-kit.git"
+  - "La integración opencode en Spec Kit instala comandos speckit.* en .opencode/commands/ con formato Markdown (.md)"
+  - "gem-team espera un .gem-team.yaml en la raíz del proyecto con secciones phases, agents, context_sources"
+  - "El plugin superpowers de opencode permite comandos personalizados sin configuración adicional"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TASKS
+# ═══════════════════════════════════════════════════════════════════════════
+tasks:
+  # ---------------------------------------------------------------------
+  # WAVE 1: Foundation (parallel)
+  # ---------------------------------------------------------------------
+  - id: "SK-INSTALL"
+    title: "Instalar specify CLI"
+    description: >
+      Instalar la CLI de Spec Kit (specify) usando uv tool install desde
+      el repositorio oficial de GitHub. Verificar que el binario 'specify'
+      esté disponible en PATH tras la instalación. Usar la rama main para
+      obtener la integración opencode más reciente.
+    wave: 1
+    agent: "gem-devops"
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    details:
+      command: "uv tool install specify-cli --from git+https://github.com/github/spec-kit.git"
+      verification: "specify --help"
+      post_install_check:
+        - "specify version"
+        - "specify integration list | Select-String opencode"
+    tech_stack: ["Python 3.12", "uv 0.11.7", "Git"]
+    handoff:
+      do_not_reinvestigate:
+        - "specify CLI installation method"
+        - "uv tool install vs pipx decision"
+      target_files: []
+      acceptance_checks:
+        - "specify --version retorna sin error"
+        - "specify integration list muestra 'opencode' como integración disponible"
+
+  - id: "SK-RESEARCH"
+    title: "Investigar schema de .gem-team.yaml y mecanismo de skills de opencode"
+    description: >
+      Investigar:
+      1. El formato/estructura esperado de .gem-team.yaml (phases, agents,
+         context_sources, artifact_routes) a partir de la documentación
+         disponible de gem-team.
+      2. Cómo opencode maneja comandos personalizados en .opencode/commands/
+         y si el plugin superpowers añade capacidades extras.
+      3. El mapeo óptimo entre los artifacts de Spec Kit (.specify/memory/,
+         specs/<feature>/*.md) y las fases de gem-team.
+    wave: 1
+    agent: "gem-researcher"
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    details:
+      focus_areas:
+        - ".gem-team.yaml schema (phases, agents, context_sources, artifact_routes)"
+        - "Opencode commands format (.opencode/commands/)"
+        - "Plugin superpowers capabilities"
+        - "Spec Kit artifact directory structure y contenidos"
+      deliverables:
+        - "Schema de .gem-team.yaml documentado"
+        - "Mapeo Spec Kit artifacts → gem-team phases"
+        - "Lista de comandos speckit a registrar como skills"
+    handoff:
+      do_not_reinvestigate:
+        - "Lista de comandos speckit (constitution, specify, plan, tasks, implement, clarify, analyze, converge, checklist)"
+        - "Estructura de directorios .specify/ y specs/"
+      target_files:
+        - ".opencode/commands/ (post-init)"
+        - ".specify/"
+      acceptance_checks:
+        - "Schema de .gem-team.yaml definido con campos phases, agents, context_sources"
+        - "Mapeo completo: Spec Kit phase → gem-team phase documentado"
+
+  # ---------------------------------------------------------------------
+  # WAVE 2: Initialization & Configuration
+  # ---------------------------------------------------------------------
+  - id: "SK-INIT"
+    title: "Inicializar Spec Kit en el proyecto"
+    description: >
+      Ejecutar 'specify init . --integration opencode --force' en la raíz
+      del proyecto. Esto crea la estructura .specify/ con templates,
+      comandos en .opencode/commands/ (speckit.constitution.md,
+      speckit.specify.md, speckit.plan.md, speckit.tasks.md,
+      speckit.implement.md, etc.) y el contexto inicial en AGENTS.md.
+      Usar --force porque el directorio está vacío pero 'specify init .'
+      puede pedir confirmación.
+    wave: 2
+    agent: "gem-devops"
+    status: pending
+    dependencies: ["SK-INSTALL"]
+    conflicts_with: []
+    details:
+      command: "cd 'E:\Proyecto Hoteles' && specify init . --integration opencode --force"
+      verification: |
+        Test-Path .specify/
+        Test-Path .opencode/commands/
+        Get-ChildItem .opencode/commands/ -Name
+        Test-Path AGENTS.md
+      expected_files:
+        - ".specify/memory/constitution.md"
+        - ".specify/templates/"
+        - ".specify/scripts/"
+        - ".opencode/commands/speckit.constitution.md"
+        - ".opencode/commands/speckit.specify.md"
+        - ".opencode/commands/speckit.plan.md"
+        - ".opencode/commands/speckit.tasks.md"
+        - ".opencode/commands/speckit.implement.md"
+    tech_stack: ["Python 3.12", "specify CLI"]
+    handoff:
+      do_not_reinvestigate:
+        - "specify init command"
+        - "Estructura generada por defecto"
+      target_files:
+        - ".opencode/commands/"
+        - ".specify/"
+        - "AGENTS.md"
+      acceptance_checks:
+        - "Directorio .specify/ creado con memory/, templates/, scripts/"
+        - "Directorio .opencode/commands/ poblado con comandos speckit.*.md"
+        - "AGENTS.md contiene sección <!-- SPECKIT START --> ... <!-- SPECKIT END -->"
+        - "specify integration list confirma opencode como integración activa"
+
+  - id: "SK-GEMTEAM-CONFIG"
+    title: "Crear .gem-team.yaml para orquestación"
+    description: >
+      Crear el archivo .gem-team.yaml en la raíz del proyecto con la
+      configuración necesaria para que gem-team:
+      - Detecte proyectos Spec Kit (por presencia de .specify/)
+      - Cargue artifacts como contexto semilla en Phase 0 (Init & Clarify)
+      - Mapee comandos Spec Kit a agentes gem-team
+      - Configure rutas de artifacts para Phase 2 (Planning) y Phase 3
+      La configuración se basa en el schema investigado en SK-RESEARCH.
+    wave: 2
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["SK-RESEARCH"]
+    conflicts_with: []
+    details:
+      config_structure:
+        version: 1
+        spec_kit:
+          enabled: true
+          detect: ".specify/"
+        phases:
+          phase_0:
+            context_sources:
+              - ".specify/memory/constitution.md"
+              - "specs/*/spec.md"
+          phase_1:
+            route: "specify"
+          phase_2:
+            plan_sources:
+              - "specs/*/plan.md"
+            agent: "gem-planner"
+          phase_3:
+            task_sources:
+              - "specs/*/tasks.md"
+            agents:
+              implement: "gem-implementer"
+              review: "gem-reviewer"
+              test: "gem-browser-tester"
+          phase_4:
+            output: "context_envelope.json + artifacts"
+        artifact_routes:
+          constitution: ".specify/memory/constitution.md"
+          spec: "specs/<feature>/spec.md"
+          plan: "specs/<feature>/plan.md"
+          tasks: "specs/<feature>/tasks.md"
+          contracts: "specs/<feature>/contracts/"
+          data_model: "specs/<feature>/data-model.md"
+    tech_stack: ["YAML"]
+    handoff:
+      do_not_reinvestigate:
+        - "Schema de .gem-team.yaml"
+        - "Mapeo de fases Spec Kit → gem-team"
+      target_files:
+        - ".gem-team.yaml"
+      acceptance_checks:
+        - ".gem-team.yaml existe en la raíz del proyecto"
+        - "Contiene sección spec_kit con enabled: true"
+        - "Contiene mapeo phase_0 → context_sources con .specify/memory/constitution.md"
+        - "Contiene artifact_routes para spec, plan, tasks"
+        - "YAML válido (python -c 'import yaml; yaml.safe_load(open(\".gem-team.yaml\"))')"
+
+  # ---------------------------------------------------------------------
+  # WAVE 3: Documentation & Automation
+  # ---------------------------------------------------------------------
+  - id: "SK-AGENTS-DOC"
+    title: "Documentar integración en AGENTS.md"
+    description: >
+      Actualizar AGENTS.md (creado por specify init) con instrucciones
+      detalladas de integración gem-team. Incluir:
+      - Cómo gem-team detecta proyectos Spec Kit
+      - Cómo cargar constitution.md como memoria en Phase 0
+      - Cómo usar plan.md como input de gem-planner en Phase 2
+      - Cómo ejecutar tasks.md mediante agentes en Phase 3
+      - Referencia rápida de comandos speckit y su equivalente gem-team
+      El contenido se inserta DENTRO de la sección <!-- SPECKIT START -->
+      que ya existe (generada por SK-INIT) para mantener compatibilidad.
+    wave: 3
+    agent: "gem-documentation-writer"
+    status: pending
+    dependencies: ["SK-INIT", "SK-GEMTEAM-CONFIG"]
+    conflicts_with: []
+    details:
+      sections:
+        - "Gem-Team Integration Overview"
+        - "Phase 0: Context Loading (constitution.md, spec.md)"
+        - "Phase 2: Plan Ingestion (plan.md → gem-planner)"
+        - "Phase 3: Task Execution (tasks.md → agents)"
+        - "Slash Commands Reference (speckit.* → gem-team agents)"
+        - "Artifact Mapping (.specify/ → context_envelope.json)"
+      audience: "developers"
+    task_type: "documentation"
+    handoff:
+      do_not_reinvestigate:
+        - "Estructura de .specify/"
+        - "Fases de gem-team"
+        - "Mapeo de comandos Spec Kit"
+      target_files:
+        - "AGENTS.md"
+      acceptance_checks:
+        - "AGENTS.md contiene sección '## Gem-Team Integration'"
+        - "Documenta carga de constitution.md en Phase 0"
+        - "Documenta uso de plan.md como input de gem-planner"
+        - "Documenta ejecución de tasks.md mediante agentes"
+        - "Documenta mapeo de comandos speckit.* a agentes gem-team"
+
+  - id: "SK-SKILLS"
+    title: "Crear skills/hooks OpenCode para flujo Spec Kit"
+    description: >
+      Crear skills de OpenCode (en .opencode/commands/ o skills/) que
+      automaticen el flujo Spec Kit → gem-team:
+      1. Skill 'speckit-plan-to-gem': Lee specs/<feature>/plan.md y lo
+         pasa como contexto a gem-planner
+      2. Skill 'speckit-tasks-to-agents': Lee specs/<feature>/tasks.md
+         y despacha cada tarea al agente gem-team correspondiente
+      3. Hook post-constitution: Actualiza context_envelope.json con
+         el contenido de .specify/memory/constitution.md
+      Los skills deben ser invocables desde opencode como comandos.
+      Aprovechar que specify init ya creó los comandos base speckit.*
+      en .opencode/commands/; estos skills son wrappers de orquestación.
+    wave: 3
+    agent: "gem-skill-creator"
+    status: pending
+    dependencies: ["SK-INIT", "SK-GEMTEAM-CONFIG"]
+    conflicts_with: []
+    details:
+      skills_to_create:
+        - name: "speckit-to-gem-team"
+          description: "Orquestar flujo completo Spec Kit → gem-team"
+          commands:
+            - "speckit.constitution → cargar en Phase 0"
+            - "speckit.specify → generar spec.md"
+            - "speckit.plan → pasar a gem-planner"
+            - "speckit.tasks → generar tasks.md"
+            - "speckit.implement → despachar a agentes gem-team"
+        - name: "speckit-plan-context"
+          description: "Convertir plan.md a contexto de gem-planner"
+          trigger: "post speckit.plan"
+        - name: "speckit-task-dispatch"
+          description: "Distribuir tasks.md a agentes gem-team por wave"
+          trigger: "post speckit.tasks"
+      location: ".opencode/commands/speckit-*.md"
+    handoff:
+      do_not_reinvestigate:
+        - "Comandos speckit.* existentes en .opencode/commands/"
+        - "Estructura de tasks.md de Spec Kit"
+      target_files:
+        - ".opencode/commands/speckit-to-gem-team.md"
+        - ".opencode/commands/speckit-plan-context.md"
+        - ".opencode/commands/speckit-task-dispatch.md"
+      acceptance_checks:
+        - "Skills creados en .opencode/commands/ como archivos .md"
+        - "Skill de orquestación invoca speckit.constitution → speckit.specify → speckit.plan → speckit.tasks → speckit.implement en secuencia"
+        - "Skill de plan-context parsea plan.md y produce input para gem-planner"
+        - "Skill de task-dispatch mapea tareas a agentes gem-team (implementer, reviewer, tester)"
+
+  # ---------------------------------------------------------------------
+  # WAVE 4: Context Bridge
+  # ---------------------------------------------------------------------
+  - id: "SK-CONTEXT-BRIDGE"
+    title: "Crear bridge context_envelope.json desde artifacts Spec Kit"
+    description: >
+      Crear el mecanismo (script o template) que genera/actualiza
+      context_envelope.json a partir de los artifacts de Spec Kit.
+      El bridge debe:
+      - Leer .specify/memory/constitution.md → tech_stack, conventions,
+        constraints en context_envelope.architecture_snapshot
+      - Leer specs/<feature>/spec.md → research_digest.domain_context
+      - Leer specs/<feature>/data-model.md → architecture_snapshot
+      - Leer specs/<feature>/contracts/ → patterns_found
+      - Poblar research_digest.relevant_files con paths de .specify/
+      - Poblar prior_decisions con decisiones capturadas en constitution.md
+      Crear también un script PowerShell (update-context-bridge.ps1) que
+      automatice la sincronización.
+    wave: 4
+    agent: "gem-planner"
+    status: pending
+    dependencies: ["SK-AGENTS-DOC", "SK-SKILLS"]
+    conflicts_with: []
+    details:
+      bridge_components:
+        - path: ".specify/scripts/powershell/update-context-bridge.ps1"
+          purpose: "Script que lee artifacts Spec Kit y genera context_envelope.json"
+        - path: "context_envelope.json"
+          purpose: "Context envelope poblado desde artifacts Spec Kit (template)"
+      mapping:
+        constitution_md:
+          principles → conventions
+          tech_decisions → prior_decisions
+          guidelines → constraints
+        spec_md:
+          user_stories → research_digest.domain_context
+          requirements → scope.purpose
+          acceptance_criteria → acceptance_criteria
+        plan_md:
+          tech_stack → tech_stack
+          architecture → architecture_snapshot
+          risks → open_questions
+        tasks_md:
+          task_list → tasks (for gem-team DAG)
+          dependencies → task.dependencies
+    tech_stack: ["PowerShell", "Python 3.12"]
+    handoff:
+      do_not_reinvestigate:
+        - "Formato de context_envelope.json (context_envelope_format_guide)"
+        - "Estructura de artifacts Spec Kit"
+      target_files:
+        - "context_envelope.json"
+        - ".specify/scripts/powershell/update-context-bridge.ps1"
+      acceptance_checks:
+        - "Script update-context-bridge.ps1 existe y es ejecutable"
+        - "Script parsea constitution.md correctamente"
+        - "Script parsea spec.md correctamente"
+        - "context_envelope.json generado contiene secciones tech_stack, conventions, constraints, architecture_snapshot"
+        - "Mapeo biyectivo: cada artifact Spec Kit → sección de context_envelope"
+
+  # ---------------------------------------------------------------------
+  # WAVE 5: Review & Verification
+  # ---------------------------------------------------------------------
+  - id: "SK-REVIEW"
+    title: "Revisar integración completa"
+    description: >
+      Revisar todos los archivos creados para asegurar coherencia,
+      completitud y corrección:
+      - .gem-team.yaml vs schema esperado
+      - AGENTS.md vs documentación de integración
+      - Skills en .opencode/commands/
+      - Context bridge script
+      - Mapeo de fases Spec Kit → gem-team
+      - Consistencia entre artifacts
+      Señalar cualquier brecha, error o mejora necesaria.
+    wave: 5
+    agent: "gem-reviewer"
+    status: pending
+    dependencies: ["SK-CONTEXT-BRIDGE"]
+    conflicts_with: []
+    details:
+      review_depth: "standard"
+      review_focus:
+        - "Completitud del mapeo de fases"
+        - "Corrección del .gem-team.yaml"
+        - "Consistencia AGENTS.md vs skills"
+        - "Funcionamiento del context bridge"
+        - "Manejo de errores y edge cases"
+      requires_review: true
+    handoff:
+      do_not_reinvestigate:
+        - "Detalles de implementación ya revisados"
+      target_files:
+        - ".gem-team.yaml"
+        - "AGENTS.md"
+        - ".opencode/commands/speckit-to-gem-team.md"
+        - ".opencode/commands/speckit-plan-context.md"
+        - ".opencode/commands/speckit-task-dispatch.md"
+        - "context_envelope.json"
+        - ".specify/scripts/powershell/update-context-bridge.ps1"
+      acceptance_checks:
+        - "Review completa sin blocking issues"
+        - "Todas las dependencias entre archivos son coherentes"
+        - "No hay paths rotos ni referencias inválidas"
+
+  - id: "SK-VERIFY"
+    title: "Verificar integración end-to-end"
+    description: >
+      Verificación completa del flujo integrado:
+      1. specify CLI está instalado y responde
+      2. specify integration list muestra opencode
+      3. La estructura .specify/ existe con todos los subdirectorios
+      4. Los comandos speckit.* están en .opencode/commands/
+      5. .gem-team.yaml es YAML válido
+      6. AGENTS.md tiene la sección de integración gem-team
+      7. Los skills de orquestación existen
+      8. El context bridge script corre sin errores
+      9. context_envelope.json tiene las secciones esperadas
+      Probar el flujo completo: constitution → specify → plan → tasks
+      con un feature de prueba mínimo (dry-run si es posible).
+    wave: 5
+    agent: "gem-implementer"
+    status: pending
+    dependencies: ["SK-REVIEW"]
+    conflicts_with: []
+    details:
+      verification_steps:
+        - "specify --version"
+        - "specify integration list | findstr opencode"
+        - "Test-Path .specify/memory/constitution.md"
+        - "Get-ChildItem .opencode/commands/ -Name | findstr speckit"
+        - "python -c 'import yaml; yaml.safe_load(open(\".gem-team.yaml\"))'"
+        - "Select-String 'Gem-Team Integration' AGENTS.md"
+        - "Test-Path .opencode/commands/speckit-to-gem-team.md"
+        - "Test-Path .opencode/commands/speckit-plan-context.md"
+        - "& .specify/scripts/powershell/update-context-bridge.ps1 -DryRun"
+        - "Test-Path context_envelope.json"
+      feature_dry_run:
+        description: "Ejecutar speckit.constitution y speckit.specify con un prompt mínimo si es posible"
+    handoff:
+      do_not_reinvestigate:
+        - "Resultados de pasos anteriores ya verificados"
+      target_files: []
+      acceptance_checks:
+        - "specify CLI funcional (--version)"
+        - "Integración opencode confirmada en integration list"
+        - ".specify/ estructura completa"
+        - "Todos los comandos speckit.* en .opencode/commands/"
+        - ".gem-team.yaml es YAML válido"
+        - "AGENTS.md contiene documentación de integración"
+        - "Skills de orquestación creados"
+        - "Context bridge script ejecutable"
+        - "context_envelope.json existe con secciones mapeadas"

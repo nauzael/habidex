@@ -1,0 +1,28 @@
+{
+  "status": "completed",
+  "plan_id": "20260627-spec-kit-gemteam-integration",
+  "envelope_path": "docs/plan/20260627-spec-kit-gemteam-integration/context_envelope.json",
+  "summary": {
+    "previous_plan_id": "spec-kit-integration",
+    "issues_fixed": {
+      "critico_paradoja_temporal": "SK-VERIFY movido a Wave 6 (post-review). SK-REVIEW se queda en Wave 5. Dependencia SK-VERIFY → SK-REVIEW ahora respeta orden temporal.",
+      "medio_acceptance_criteria": "Todas las 9 tareas tienen acceptance_criteria (array de condiciones medibles) y verification (comando/paso para verificar).",
+      "medio_install_command": "uv tool install ahora usa --source git+https://...@<tag> en lugar de --from. Obtiene el último tag vía git ls-remote --tags con fallback a main.",
+      "medio_backup_pre_init": "SK-INIT ahora incluye backup de .opencode/commands/ → .opencode/commands.bak/ y AGENTS.md → AGENTS.md.bak antes de specify init . --force. Rollback steps documentados.",
+      "bajo_schema_contract": "SK-CONTEXT-BRIDGE documenta schema/contrato de salida: 8 campos obligatorios con tipo y origen. Además crea context_envelope.schema.json como schema de validación."
+    },
+    "wave_summary": {
+      "wave_1_parallel": ["SK-INSTALL (instalar specify CLI con tag)", "SK-RESEARCH (investigar schemas)"],
+      "wave_2": ["SK-INIT (init con backup previo)", "SK-GEMTEAM-CONFIG (crear .gem-team.yaml)"],
+      "wave_3": ["SK-AGENTS-DOC (documentar integración)", "SK-SKILLS (crear skills/hooks)"],
+      "wave_4": ["SK-CONTEXT-BRIDGE (bridge + schema contract)"],
+      "wave_5": ["SK-REVIEW (revisión completa)"],
+      "wave_6": ["SK-VERIFY (verificación post-review)"]
+    },
+    "dependencies": {
+      "total_dependencies": 15,
+      "no_circular_deps": true,
+      "no_temporal_paradoxes": true
+    }
+  }
+}

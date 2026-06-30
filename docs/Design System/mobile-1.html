@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HotelManager · Login</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="components.css" />
+  <link rel="stylesheet" href="mobile.css" />
+</head>
+<body>
+  <div class="stage">
+    <div class="stage__caption">mobile-1 · <strong>Login</strong></div>
+    <div class="phone">
+      <div class="status-bar status-bar--brand">
+        <span>9:41</span>
+        <div class="status-bar__icons">
+          <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><path d="M1 9h2V5H1zM5 9h2V3H5zM9 9h2V1H9zM13 9h2V-3h-2z"/></svg>
+          <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><path d="M7 3.5L1 7v2h12V7L7 3.5z"/></svg>
+          <svg width="20" height="10" viewBox="0 0 20 10" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="0.5" y="0.5" width="16" height="9" rx="2"/><rect x="2" y="2" width="11" height="6" rx="1" fill="currentColor"/><rect x="17.5" y="3" width="1.5" height="4" fill="currentColor"/></svg>
+        </div>
+      </div>
+
+      <div class="screen screen--dark">
+        <div class="login">
+          <div class="login__brand">
+            <span class="login__brand-mark">H</span>
+            <span>HotelManager</span>
+          </div>
+
+          <h1 class="login__title">Bienvenido de vuelta, Don José</h1>
+          <p class="login__sub">Gestiona tu hotel desde cualquier lugar. Tienes 12 check-ins programados hoy.</p>
+
+          <form class="login__form" onsubmit="event.preventDefault(); window.location='mobile-2.html';">
+            <div class="field">
+              <label class="field__label" for="email">Correo electrónico</label>
+              <div class="field__wrap">
+                <svg class="field__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+                <input class="field__input" type="email" id="email" placeholder="nombre@hotel.com" value="jose@lasacacias.co" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="password">Contraseña</label>
+              <div class="field__wrap">
+                <svg class="field__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                <input class="field__input" type="password" id="password" placeholder="••••••••" value="••••••••" />
+                <button type="button" class="field__trailing" style="background:none;border:0;color:rgba(255,255,255,0.5);font:inherit">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+                <label style="font-size:12px;color:rgba(255,255,255,0.7);display:inline-flex;align-items:center;gap:6px">
+                  <input type="checkbox" checked style="accent-color:var(--accent)" />Recordar este dispositivo
+                </label>
+                <a href="#" style="font-size:12px;color:var(--accent);font-weight:600">¿Olvidaste tu clave?</a>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn--accent login__submit">Ingresar al panel</button>
+
+            <div class="login__divider">o continúa con</div>
+
+            <button type="button" class="login__alt">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h5.4c-.2 1.3-1 2.3-2.1 3v2.5h3.4c2-1.8 3.1-4.5 3.1-7.2z"/><path d="M12 22c2.8 0 5.2-.9 6.9-2.5l-3.4-2.5c-.9.6-2.1 1-3.5 1-2.7 0-5-1.8-5.8-4.3H2.7v2.6C4.4 19.6 7.9 22 12 22z" opacity="0"/><path d="M6.2 13.7c-.2-.6-.3-1.2-.3-1.7s.1-1.1.3-1.7V7.7H2.7C2 9 1.7 10.4 1.7 12s.3 3 1 4.3l3.5-2.6z" opacity="0"/><path d="M12 5.8c1.5 0 2.9.5 4 1.5l3-3C17.1 2.6 14.7 1.7 12 1.7 7.9 1.7 4.4 4.1 2.7 7.5l3.5 2.7c.8-2.5 3.1-4.4 5.8-4.4z"/></svg>
+              Google Workspace
+            </button>
+          </form>
+
+          <div class="login__footer">
+            ¿Aún no tienes cuenta? <a href="#">Habla con ventas →</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="home-indicator home-indicator--brand">
+        <div class="home-indicator__bar"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

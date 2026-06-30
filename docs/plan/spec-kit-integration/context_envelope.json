@@ -1,0 +1,401 @@
+{
+  "context_envelope": {
+    "meta": {
+      "plan_id": "spec-kit-integration",
+      "created_at": "2026-06-27T12:00:00Z",
+      "last_updated": "2026-06-27T12:00:00Z",
+      "version": 1,
+      "source": [
+        "https://github.com/github/spec-kit",
+        "https://github.com/github/spec-kit/blob/main/AGENTS.md",
+        "https://github.com/github/spec-kit/blob/main/src/specify_cli/integrations/opencode/__init__.py",
+        "https://github.com/github/spec-kit/blob/main/src/specify_cli/integrations/__init__.py",
+        "https://github.com/github/spec-kit/blob/main/src/specify_cli/integrations/base.py",
+        "user_context: gem-team orchestrator description"
+      ]
+    },
+    "scope": {
+      "purpose": [
+        "Integrar Spec Kit (Spec-Driven Development toolkit de GitHub) con gem-team (orquestador multi-agente)",
+        "Permitir que gem-team descubra, lea y procese artifacts de Spec Kit como contexto nativo en sus fases",
+        "Automatizar el flujo constitution → specify → plan → tasks → implement usando agentes gem-team",
+        "Crear skills de opencode que orquesten el pipeline completo"
+      ],
+      "applies_to": [
+        "E:\\Proyecto Hoteles",
+        "Proyectos que usen gem-team como orquestador y Spec Kit para SDD"
+      ],
+      "non_goals": [
+        "No se modifica el código fuente de Spec Kit (es una integración externa vía configuración)",
+        "No se crea un nuevo integration subpackage en Spec Kit (opencode ya existe como built-in)",
+        "No se implementa lógica de negocio del proyecto hoteles"
+      ]
+    },
+    "tech_stack": [
+      {
+        "name": "specify-cli",
+        "version": "0.11.10.dev0",
+        "usage_context": "CLI principal de Spec Kit para bootstrap, init, y gestión de integraciones",
+        "config_files": [".specify/"]
+      },
+      {
+        "name": "Python",
+        "version": "3.12.10",
+        "usage_context": "Runtime de specify CLI y scripts de context bridge",
+        "config_files": []
+      },
+      {
+        "name": "uv",
+        "version": "0.11.7",
+        "usage_context": "Package manager para instalar specify-cli como tool global",
+        "config_files": []
+      },
+      {
+        "name": "opencode",
+        "version": "latest",
+        "usage_context": "AI coding agent con plugin superpowers; destino de la integración opencode de Spec Kit",
+        "config_files": [".opencode/commands/", "opencode.json"]
+      }
+    ],
+    "conventions": [
+      "Los comandos Spec Kit se instalan en .opencode/commands/speckit.<name>.md (formato Markdown)",
+      "Spec Kit usa <!-- SPECKIT START --> / <!-- SPECKIT END --> como markers en AGENTS.md",
+      "Los artifacts de especificación van en specs/<feature>/: spec.md, plan.md, tasks.md, contracts/, data-model.md",
+      "La memoria/constitucion del proyecto va en .specify/memory/constitution.md",
+      "gem-team phases: Phase 0 (Init&Clarify) → Phase 1 (Route) → Phase 2 (Planning) → Phase 3 (Execution) → Phase 4 (Output)",
+      "El context_envelope.json es el contrato de contexto entre fases de gem-team"
+    ],
+    "constraints": {
+      "hard": [
+        "Python >= 3.11 requerido por specify-cli",
+        "uv requerido para instalación de specify CLI",
+        "Git requerido (Spec Kit crea branches por feature)",
+        "Windows 10/11 (SO actual: Win32)"
+      ],
+      "soft": [
+        "Preferir MarkdownIntegration como base (opencode ya usa este patrón)",
+        "Evitar modificar archivos del core de Spec Kit"
+      ],
+      "compatibility": [
+        "specify init . --integration opencode → funciona out-of-the-box (integración built-in existente)",
+        "specify init en Windows puede tener diferencias en paths (usar --force para evitar prompts interactivos)"
+      ],
+      "security_requirements": []
+    },
+    "architecture_snapshot": {
+      "key_dirs": {
+        "post_init_paths": [
+          ".specify/memory/",
+          ".specify/templates/",
+          ".specify/scripts/bash/",
+          ".specify/scripts/powershell/",
+          ".opencode/commands/",
+          "specs/<feature>/",
+          "specs/<feature>/contracts/"
+        ]
+      },
+      "patterns": [
+        "Spec Kit Markdown commands: archivos .md con frontmatter YAML (description:) y placeholders {SCRIPT}, $ARGUMENTS",
+        "Opencode run pattern: opencode run --command <name> [args]",
+        "Gem-team DAG waves: tareas paralelizadas por wave con dependencias explícitas"
+      ],
+      "key_components": [
+        {
+          "name": "OpencodeIntegration",
+          "location": "specify-cli/src/specify_cli/integrations/opencode/__init__.py",
+          "responsibility": [
+            "Define cómo Spec Kit instala comandos en opencode",
+            "Configura .opencode/commands/ como directorio de comandos",
+            "Usa AGENTS.md como context_file",
+            "Implementa build_exec_args para invocar opencode run --command"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "name": "specify CLI",
+          "location": "instalado vía uv tool install",
+          "responsibility": [
+            "Bootstrap de proyectos Spec Kit",
+            "Gestión de integraciones (init, list, install, uninstall)",
+            "Gestión de extensiones, presets, bundles"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "name": ".gem-team.yaml",
+          "location": "raíz del proyecto (por crear)",
+          "responsibility": [
+            "Configurar orquestador gem-team",
+            "Mapear fases Spec Kit a fases gem-team",
+            "Definir rutas de artifacts y context_sources"
+          ],
+          "confidence": 0.7
+        },
+        {
+          "name": "context_envelope.json",
+          "location": "docs/plan/<plan_id>/context_envelope.json",
+          "responsibility": [
+            "Bridge de contexto entre Spec Kit artifacts y gem-team phases",
+            "Cache de descubrimiento para evitar re-discovery"
+          ],
+          "confidence": 0.9
+        }
+      ]
+    },
+    "research_digest": {
+      "relevant_files": [
+        {
+          "path": ".specify/memory/constitution.md",
+          "purpose": ["Principios rectores del proyecto"],
+          "why_relevant": ["Fuente primaria de contexto para Phase 0 de gem-team"],
+          "key_elements": [
+            {
+              "element": "Project Principles",
+              "type": "section",
+              "location": ".specify/memory/constitution.md",
+              "description": "Governing principles and development guidelines"
+            }
+          ],
+          "security_sensitivity": "none",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        },
+        {
+          "path": "specs/<feature>/spec.md",
+          "purpose": ["Especificación funcional del feature"],
+          "why_relevant": ["Define user stories y requirements que gem-team debe implementar"],
+          "key_elements": [
+            {
+              "element": "User Stories",
+              "type": "section",
+              "location": "specs/<feature>/spec.md",
+              "description": "Requisitos funcionales del feature"
+            }
+          ],
+          "security_sensitivity": "none",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        },
+        {
+          "path": "specs/<feature>/plan.md",
+          "purpose": ["Plan de implementación técnica"],
+          "why_relevant": ["Input directo para gem-planner en Phase 2"],
+          "key_elements": [
+            {
+              "element": "Implementation Plan",
+              "type": "section",
+              "location": "specs/<feature>/plan.md",
+              "description": "Tech stack, architecture, implementation details"
+            }
+          ],
+          "security_sensitivity": "none",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        },
+        {
+          "path": "specs/<feature>/tasks.md",
+          "purpose": ["Desglose de tareas ejecutables"],
+          "why_relevant": ["Define tareas que gem-team debe distribuir entre agentes en Phase 3"],
+          "key_elements": [
+            {
+              "element": "Task Breakdown",
+              "type": "section",
+              "location": "specs/<feature>/tasks.md",
+              "description": "Lista de tareas con dependencias y parallel execution markers"
+            }
+          ],
+          "security_sensitivity": "none",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        },
+        {
+          "path": ".opencode/commands/speckit.constitution.md",
+          "purpose": ["Comando speckit.constitution para opencode"],
+          "why_relevant": ["Integración nativa Spec Kit → opencode, invocable por gem-team"],
+          "key_elements": [
+            {
+              "element": "Slash Command",
+              "type": "file",
+              "location": ".opencode/commands/speckit.constitution.md",
+              "description": "Comando Markdown con frontmatter YAML para speckit.constitution"
+            }
+          ],
+          "security_sensitivity": "none",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        },
+        {
+          "path": "AGENTS.md",
+          "purpose": ["Contexto de integración para coding agents"],
+          "why_relevant": ["Spec Kit gestiona sección <!-- SPECKIT START/END -->; gem-team extiende con documentación de integración"],
+          "key_elements": [
+            {
+              "element": "SPECKIT Section",
+              "type": "section",
+              "location": "AGENTS.md",
+              "description": "Managed context section for Spec Kit commands and integration"
+            },
+            {
+              "element": "Gem-Team Section",
+              "type": "section",
+              "location": "AGENTS.md",
+              "description": "To be added: gem-team integration instructions"
+            }
+          ],
+          "security_sensitivity": "none",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 1.0
+        }
+      ],
+      "patterns_found": [
+        {
+          "name": "MarkdownIntegration pattern",
+          "category": "Spec Kit Integration",
+          "confidence": 1.0,
+          "source": "codebase_analysis",
+          "example_location": ["src/specify_cli/integrations/opencode/__init__.py"]
+        },
+        {
+          "name": "Gem-team DAG wave pattern",
+          "category": "Orchestration",
+          "confidence": 0.8,
+          "source": "doc",
+          "example_location": []
+        },
+        {
+          "name": "Context envelope bridge pattern",
+          "category": "Integration Architecture",
+          "confidence": 0.7,
+          "source": "assumption",
+          "example_location": []
+        }
+      ],
+      "dependencies": {
+        "internal": [
+          ".gem-team.yaml → AGENTS.md (context_sources reference)",
+          ".gem-team.yaml → .opencode/commands/ (command routing)",
+          "context_envelope.json → .specify/memory/ (context source)",
+          "context_envelope.json → specs/ (plan/tasks source)"
+        ],
+        "external": [
+          "specify-cli (Python package via git+https://github.com/github/spec-kit.git)",
+          "uv (package manager)",
+          "Python 3.11+",
+          "Git"
+        ]
+      },
+      "gotchas": [
+        {
+          "text": "specify init en modo no-interactivo necesita --force para directorios no-vacíos; en directorio vacío puede pedir confirmación igualmente",
+          "confidence": 0.9
+        },
+        {
+          "text": "En Windows, 'specify init' puede tener problemas con paths y permisos; probar con --ignore-agent-tools si falla detección de CLI",
+          "confidence": 0.7
+        },
+        {
+          "text": "La integración opencode en Spec Kit usa MarkdownIntegration con key='opencode' y requires_cli=True, lo que significa que detecta el binario 'opencode' en PATH",
+          "confidence": 1.0
+        },
+        {
+          "text": "specify init crea AGENTS.md con sección <!-- SPECKIT START/END -->; cualquier modificación fuera de esos markers se preserva en upgrades",
+          "confidence": 0.9
+        }
+      ],
+      "domain_context": {
+        "security_considerations": [],
+        "testing_patterns": {
+          "framework": "pytest",
+          "coverage_areas": ["integration setup", "command installation", "context file management"],
+          "test_organization": "tests/integrations/test_integration_opencode.py",
+          "mock_patterns": []
+        },
+        "error_handling": "Spec Kit CLI maneja errores con typer+rich; fallos de integración se reportan con console.print",
+        "data_flow": "specify init → escribe comandos en .opencode/commands/ → upsert contexto en AGENTS.md → usuario invoca comandos via opencode run --command"
+      },
+      "open_questions": [
+        {
+          "question": "¿specify init . --integration opencode funciona en Windows sin errores de PATH?",
+          "context": "requires_cli=True en OpencodeIntegration significa que shutil.which('opencode') debe encontrar el binario",
+          "type": "decision_blocker",
+          "affects": ["SK-INIT", "SK-VERIFY"]
+        },
+        {
+          "question": "¿Cuál es el schema exacto de .gem-team.yaml?",
+          "context": "No existe referencia oficial; se infiere de la descripción del orquestador",
+          "type": "decision_blocker",
+          "affects": ["SK-GEMTEAM-CONFIG"]
+        },
+        {
+          "question": "¿El plugin superpowers de opencode permite skills complejos o solo comandos simples?",
+          "context": "Los skills creados deben ser invocables y ejecutar secuencias multi-paso",
+          "type": "decision_blocker",
+          "affects": ["SK-SKILLS"]
+        }
+      ]
+    },
+    "prior_decisions": [
+      {
+        "decision": "Usar integración opencode built-in de Spec Kit en lugar de crear integración custom",
+        "rationale": [
+          "Ya existe OpencodeIntegration completa en src/specify_cli/integrations/opencode/",
+          "Soporta MarkdownIntegration, build_exec_args custom, y context_file = AGENTS.md",
+          "Está registrada en _register_builtins() y disponible via specify init --integration opencode"
+        ],
+        "evidence": [
+          "src/specify_cli/integrations/opencode/__init__.py",
+          "src/specify_cli/integrations/__init__.py (línea 100: _register(OpencodeIntegration()))"
+        ],
+        "confidence": 1.0,
+        "linked_constraints": ["Usar MarkdownIntegration como base"],
+        "linked_patterns": ["MarkdownIntegration pattern"]
+      },
+      {
+        "decision": "Usar uv tool install specify-cli --from git+https://github.com/github/spec-kit.git para instalación",
+        "rationale": [
+          "Es el método oficial recomendado en la documentación de Spec Kit",
+          "uv 0.11.7 ya está instalado",
+          "Permite instalar desde git sin pasar por PyPI"
+        ],
+        "evidence": ["README.md de Spec Kit: sección '1. Install Specify CLI'"],
+        "confidence": 1.0,
+        "linked_constraints": ["Python >= 3.11", "uv requerido"],
+        "linked_patterns": []
+      },
+      {
+        "decision": "Agrupar tasks en 5 waves lógicas en lugar de secuencia lineal",
+        "rationale": [
+          "Wave 1 (paralelo): install + research sin dependencias mutuas",
+          "Wave 2: init + config dependen de Wave 1",
+          "Wave 3: doc + skills dependen de tener Spec Kit inicializado y config listo",
+          "Wave 4: context bridge depende de documentación y skills",
+          "Wave 5: review + verify son las últimas"
+        ],
+        "evidence": ["Plan DAG analysis"],
+        "confidence": 0.9,
+        "linked_constraints": [],
+        "linked_patterns": ["Gem-team DAG wave pattern"]
+      }
+    ],
+    "reuse_notes": [
+      {
+        "path": "https://github.com/github/spec-kit/blob/main/AGENTS.md",
+        "trust": "high"
+      },
+      {
+        "path": "https://github.com/github/spec-kit/blob/main/src/specify_cli/integrations/opencode/__init__.py",
+        "trust": "high"
+      },
+      {
+        "path": "https://github.com/github/spec-kit/blob/main/src/specify_cli/integrations/base.py",
+        "trust": "high"
+      }
+    ]
+  }
+}

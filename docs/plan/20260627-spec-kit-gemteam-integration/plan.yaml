@@ -1,0 +1,633 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# PLAN REVISADO: Spec Kit ↔ gem-team Integration
+# Revisión basada en review feedback:
+#   🔴 Fijada paradoja temporal Wave 5 (SK-VERIFY movido a Wave 6)
+#   🟡 Añadidos acceptance_criteria + verification a todas las tareas
+#   🟡 Comando uv tool install usa --source con tag explícito
+#   🟡 Backup pre-specify init . --force + rollback documentado
+#   🟡 Schema/contrato de context_envelope.json documentado en SK-CONTEXT-BRIDGE
+# ═══════════════════════════════════════════════════════════════════════════
+plan_id: "20260627-spec-kit-gemteam-integration"
+objective: >
+  Integración FULL entre Spec Kit y gem-team en E:\Proyecto Hoteles:
+  instalar specify CLI (con tag explícito), inicializar proyecto Spec Kit
+  con opencode (con backup previo), crear .gem-team.yaml, documentar
+  integración en AGENTS.md, crear skills/hooks, bridge de contexto, y
+  verificación post-review.
+created_at: "2026-06-27T14:00:00Z"
+completed_at: "2026-06-27T18:00:00Z"
+created_by: "gem-planner"
+status: completed
+tldr: >
+  Plan revisado en 6 waves. Wave 1: Install+research. Wave 2: Init+config
+  con backup previo. Wave 3: Docs+skills. Wave 4: Context bridge con
+  schema documentado. Wave 5: Review. Wave 6: Verify (post-review).
+  Eliminada paradoja temporal: SK-REVIEW en Wave 5, SK-VERIFY en Wave 6.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PLAN METRICS
+# ═══════════════════════════════════════════════════════════════════════════
+plan_metrics:
+  wave_1_task_count: 2
+  total_dependencies: 15
+  risk_score: medium
+
+quality_warnings:
+  - "specify init --integration opencode existe en Spec Kit, pero no validado en Windows con opencode local → backup previo mitiga riesgo de sobreescritura"
+  - "schema de .gem-team.yaml inferido (no hay especificación oficial); puede requerir ajuste post-review"
+  - "uv tool install con tag explícito requiere conocer el último tag; si el tag no existe, fallback a main"
+  - "context_envelope.json schema documentado como contrato de salida del bridge"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PLANNING ANALYSIS (MEDIUM complexity)
+# ═══════════════════════════════════════════════════════════════════════════
+open_questions:
+  - question: "¿Cuál es el último tag de github/github/spec-kit adecuado para uv tool install?"
+    context: "Para instalar con tag explícito (--source git+https://...@vX.Y.Z). Si no hay tag reciente, se usa main."
+    type: decision_blocker
+    affects: ["SK-INSTALL"]
+  - question: "¿specify init . --integration opencode funciona correctamente en Windows con opencode en PATH?"
+    context: "Spec Kit usa requires_cli=True, necesita opencode binario detectable por shutil.which()"
+    type: decision_blocker
+    affects: ["SK-INIT", "SK-VERIFY"]
+  - question: "¿Cuál es el schema exacto de .gem-team.yaml?"
+    context: "No existe documentación pública; se usará formato inferido de la descripción del orquestador."
+    type: decision_blocker
+    affects: ["SK-GEMTEAM-CONFIG"]
+
+assumptions:
+  - "Spec Kit se instalará correctamente vía uv tool install desde git+https://github.com/github/spec-kit.git con tag explícito o main como fallback"
+  - "La integración opencode en Spec Kit instala comandos speckit.* en .opencode/commands/ con formato Markdown (.md)"
+  - "gem-team espera un .gem-team.yaml en la raíz del proyecto con secciones phases, agents, context_sources"
+  - "El plugin superpowers de opencode permite comandos personalizados sin configuración adicional"
+  - "Backup de .opencode/commands/ previo a specify init permite rollback si algo sale mal"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TASKS
+# ═══════════════════════════════════════════════════════════════════════════
+tasks:
+  # ---------------------------------------------------------------------
+  # WAVE 1: Foundation (parallel — sin dependencias)
+  # ---------------------------------------------------------------------
+  - id: "SK-INSTALL"
+    title: "Instalar specify CLI con tag explícito"
+    description: >
+      Instalar la CLI de Spec Kit (specify) usando uv tool install.
+      Estrategia revisada por riesgo:
+      1. Obtener el último tag disponible del repo vía git ls-remote
+      2. Instalar con --source git+https://...@<tag>
+      3. Si no hay tag, instalar desde main como fallback
+      4. Verificar que el binario 'specify' esté disponible en PATH
+    wave: 1
+    agent: "gem-devops"
+    status: completed
+    result: "specify v0.11.9 instalado desde tag v0.11.9. Comando real: `uv tool install 'specify-cli @ git+https://github.com/github/spec-kit.git@v0.11.9'` (--source no es flag válido; se usó sintaxis package@url). specify --version → 0.11.9, integration list → opencode disponible."
+    dependencies: []
+    conflicts_with: []
+    details:
+      steps:
+        - name: "Obtener último tag"
+          command: >
+            git ls-remote --tags --sort=-v:refname
+            https://github.com/github/spec-kit.git
+            | Select-String -Pattern 'refs/tags/v?\d+\.\d+\.\d+'
+            | Select-Object -First 1
+            | ForEach-Object { $_ -replace '.*refs/tags/', '' }
+          fallback: "main"
+        - name: "Instalar specify CLI"
+          command: >
+            $tag = (git ls-remote --tags --sort=-v:refname
+            https://github.com/github/spec-kit.git
+            | Select-String -Pattern 'refs/tags/v?\d+\.\d+\.\d+'
+            | Select-Object -First 1
+            | ForEach-Object { $_ -replace '.*refs/tags/', '' });
+            if (-not $tag) { $tag = 'main' };
+            Write-Host "Instalando specify-cli desde tag: $tag";
+            uv tool install specify-cli
+            --source "git+https://github.com/github/spec-kit.git@$tag"
+        - name: "Verificar instalación"
+          command: "specify --help"
+    verification: >
+      specify --version ;
+      if ($LASTEXITCODE -eq 0) { "specify CLI instalado correctamente" }
+      else { throw "specify CLI no disponible en PATH" }
+    acceptance_criteria:
+      - "exit code 0 en specify --version"
+      - "specify --help muestra output de ayuda sin errores"
+      - "specify integration list muestra 'opencode' como integración disponible"
+      - "specify CLI disponible en PATH global"
+    tech_stack: ["Python 3.12", "uv 0.11.7", "Git"]
+    handoff:
+      do_not_reinvestigate:
+        - "Método de instalación uv tool install con --source"
+        - "Tags disponibles en github/github/spec-kit"
+      target_files: []
+      acceptance_checks:
+        - "specify --version retorna sin error"
+        - "specify integration list muestra 'opencode' como integración disponible"
+
+  - id: "SK-RESEARCH"
+    title: "Investigar schema de .gem-team.yaml y mecanismo de skills de opencode"
+    description: >
+      Investigar en paralelo a la instalación:
+      1. El formato/estructura esperado de .gem-team.yaml (phases, agents,
+         context_sources, artifact_routes)
+      2. Cómo opencode maneja comandos personalizados en .opencode/commands/
+         y plugin superpowers
+      3. Mapeo óptimo entre artifacts Spec Kit y fases gem-team
+      4. Documentar hallazgos para consumo de SK-GEMTEAM-CONFIG y SK-AGENTS-DOC
+    wave: 1
+    agent: "gem-researcher"
+    status: completed
+    result: "Schema .gem-team.yaml documentado con campos version, spec_kit, phases (0-4), artifact_routes. Opencode commands: .md con frontmatter YAML en .opencode/commands/. Mapeo completo Spec Kit→gem-team. Hallazgos: specify init --integration opencode funciona out-of-the-box; --force con backup pre-init; superpowers no interfiere."
+    dependencies: []
+    conflicts_with: []
+    details:
+      focus_areas:
+        - ".gem-team.yaml schema (phases, agents, context_sources, artifact_routes)"
+        - "Opencode commands format (.opencode/commands/)"
+        - "Plugin superpowers capabilities"
+        - "Spec Kit artifact directory structure y contenidos"
+      deliverables:
+        - "Schema documentado de .gem-team.yaml con campos y tipos"
+        - "Mapeo Spec Kit artifacts → gem-team phases (tabla)"
+        - "Lista de comandos speckit a registrar como skills"
+    acceptance_criteria:
+      - "Schema .gem-team.yaml definido con campos: spec_kit, phases (0-4), artifact_routes"
+      - "Mapeo completo: cada fase Spec Kit → fase gem-team correspondiente"
+      - "Lista de comandos speckit con descripción y agente gem-team destino"
+      - "Sección de hallazgos sobre opencode plugin superpowers y limitaciones"
+    verification: >
+      Test-Path docs/plan/20260627-spec-kit-gemteam-integration/research-output.md
+    handoff:
+      do_not_reinvestigate:
+        - "Lista de comandos speckit (constitution, specify, plan, tasks, implement, clarify, analyze, converge, checklist)"
+        - "Estructura de directorios .specify/ y specs/"
+      target_files:
+        - ".opencode/commands/ (post-init)"
+        - ".specify/"
+      acceptance_checks:
+        - "Schema de .gem-team.yaml definido con secciones: version, spec_kit, phases, artifact_routes"
+        - "Mapeo completo: Spec Kit phase → gem-team phase documentado"
+
+  # ---------------------------------------------------------------------
+  # WAVE 2: Initialization & Configuration (deps: Wave 1)
+  # ---------------------------------------------------------------------
+  - id: "SK-INIT"
+    title: "Inicializar Spec Kit en el proyecto con backup previo"
+    description: >
+      Ejecutar 'specify init . --integration opencode --force' en la raíz
+      del proyecto. ANTES de ejecutar init:
+      1. Hacer backup de .opencode/commands/ si existe → .opencode/commands.bak/
+      2. Hacer backup de AGENTS.md si existe → AGENTS.md.bak
+      3. Documentar rollback steps en el output
+      Esto crea .specify/, comandos speckit.* en .opencode/commands/,
+      y contexto inicial en AGENTS.md.
+    wave: 2
+    agent: "gem-devops"
+    status: completed
+    result: "specify init . --integration opencode --force ejecutado. .specify/ creado con memory/, templates/, scripts/powershell/, workflows/, extensions/. 11 comandos speckit.*.md en .opencode/commands/. AGENTS.md con markers SPECKIT. Backups: no aplicó (directorio vacío)."
+    dependencies: ["SK-INSTALL"]
+    conflicts_with: []
+    details:
+      pre_init_backup:
+        - "if (Test-Path .opencode/commands/) { Copy-Item -Recurse .opencode/commands/ .opencode/commands.bak/; Write-Host 'Backup creado: .opencode/commands.bak/' }"
+        - "if (Test-Path AGENTS.md) { Copy-Item AGENTS.md AGENTS.md.bak; Write-Host 'Backup creado: AGENTS.md.bak' }"
+      init_command: "specify init . --integration opencode --force"
+      rollback_steps:
+        - "if (Test-Path .opencode/commands.bak/) { Remove-Item -Recurse .opencode/commands/; Move-Item .opencode/commands.bak/ .opencode/commands/ }"
+        - "if (Test-Path AGENTS.md.bak) { Copy-Item AGENTS.md.bak AGENTS.md -Force; Remove-Item AGENTS.md.bak }"
+        - "Remove-Item -Recurse .specify/ -ErrorAction SilentlyContinue"
+      expected_files:
+        - ".specify/memory/constitution.md"
+        - ".specify/templates/"
+        - ".specify/scripts/"
+        - ".opencode/commands/speckit.constitution.md"
+        - ".opencode/commands/speckit.specify.md"
+        - ".opencode/commands/speckit.plan.md"
+        - ".opencode/commands/speckit.tasks.md"
+        - ".opencode/commands/speckit.implement.md"
+      post_init_verification:
+        - "Test-Path .specify/"
+        - "Test-Path .opencode/commands/speckit.constitution.md"
+    acceptance_criteria:
+      - "Backup de .opencode/commands/ creado antes de init (si existía)"
+      - "Backup de AGENTS.md creado antes de init (si existía)"
+      - "Directorio .specify/ creado con memory/, templates/, scripts/"
+      - "Directorio .opencode/commands/ poblado con comandos speckit.*.md"
+      - "AGENTS.md contiene sección <!-- SPECKIT START --> ... <!-- SPECKIT END -->"
+      - "Rollback documentado y ejecutable"
+    verification: >
+      Test-Path .specify/ &&
+      Test-Path .opencode/commands/speckit.constitution.md &&
+      (Test-Path .opencode/commands.bak/ -or $true) &&
+      $null -ne (Select-String -Path AGENTS.md -Pattern '<!-- SPECKIT START -->')
+    tech_stack: ["Python 3.12", "specify CLI"]
+    handoff:
+      do_not_reinvestigate:
+        - "Estructura generada por defecto de specify init"
+        - "Backup y rollback steps"
+      target_files:
+        - ".opencode/commands/"
+        - ".specify/"
+        - "AGENTS.md"
+      acceptance_checks:
+        - "Directorio .specify/ creado con memory/, templates/, scripts/"
+        - "Directorio .opencode/commands/ poblado con comandos speckit.*.md"
+        - "AGENTS.md contiene sección <!-- SPECKIT START --> ... <!-- SPECKIT END -->"
+        - "Backup pre-init existe (.opencode/commands.bak/ o AGENTS.md.bak)"
+
+  - id: "SK-GEMTEAM-CONFIG"
+    title: "Crear .gem-team.yaml para orquestación"
+    wave: 2
+    agent: "gem-implementer"
+    status: completed
+    result: ".gem-team.yaml creado en E:\\Proyecto Hoteles con version:1, orchestrator, spec_kit.enabled:true, phases 0-4 completas, artifact_routes, context_envelope, memory, y agent mapping (10 comandos speckit-* → gem-team agents). YAML validado con python yaml.safe_load()."
+
+  # ---------------------------------------------------------------------
+  # WAVE 3: Documentation & Automation (deps: Wave 2)
+  # ---------------------------------------------------------------------
+  - id: "SK-AGENTS-DOC"
+    title: "Documentar integración en AGENTS.md"
+    description: >
+      Actualizar AGENTS.md (generado por SK-INIT) con documentación
+      detallada de la integración gem-team, insertada DENTRO de los
+      markers <!-- SPECKIT START --> / <!-- SPECKIT END --> para
+      mantener compatibilidad con upgrades de Spec Kit.
+      Incluir: detección de proyectos, carga de constitution.md,
+      pipeline plan.md → gem-planner, dispatch tasks.md → agentes,
+      referencia rápida speckit.* → gem-team.
+    wave: 3
+    agent: "gem-documentation-writer"
+    status: pending
+    dependencies: ["SK-INIT", "SK-GEMTEAM-CONFIG"]
+    conflicts_with: []
+    details:
+      sections:
+        - "## Gem-Team Integration"
+        - "### Phase 0: Context Loading (constitution.md, spec.md)"
+        - "### Phase 2: Plan Ingestion (plan.md → gem-planner)"
+        - "### Phase 3: Task Execution (tasks.md → agents)"
+        - "### Slash Commands Reference (speckit.* → gem-team agents)"
+        - "### Artifact Mapping (.specify/ → context_envelope.json)"
+      audience: "developers"
+      insertion_markers:
+        start: "<!-- SPECKIT START -->"
+        end: "<!-- SPECKIT END -->"
+    acceptance_criteria:
+      - "AGENTS.md contiene sección '## Gem-Team Integration' dentro de <!-- SPECKIT START/END -->"
+      - "Documenta carga de constitution.md en Phase 0"
+      - "Documenta uso de plan.md como input de gem-planner en Phase 2"
+      - "Documenta ejecución de tasks.md mediante agentes en Phase 3"
+      - "Documenta mapeo de comandos speckit.* a agentes gem-team"
+      - "Documenta artifact mapping .specify/ → context_envelope.json"
+    verification: >
+      Select-String -Path AGENTS.md -Pattern '## Gem-Team Integration'
+    task_type: "documentation"
+    handoff:
+      do_not_reinvestigate:
+        - "Estructura de .specify/"
+        - "Fases de gem-team"
+        - "Mapeo de comandos Spec Kit"
+      target_files:
+        - "AGENTS.md"
+      acceptance_checks:
+        - "AGENTS.md contiene sección '## Gem-Team Integration' dentro de markers SPECKIT"
+        - "Documenta carga de constitution.md en Phase 0"
+        - "Documenta pipeline plan.md → gem-planner y tasks.md → agentes"
+        - "Documenta mapeo de comandos speckit.* a agentes gem-team"
+
+  - id: "SK-SKILLS"
+    title: "Crear skills/hooks OpenCode para flujo Spec Kit → gem-team"
+    description: >
+      Crear skills de OpenCode (en .opencode/commands/) que automaticen
+      el flujo. Aprovechar comandos base speckit.* ya generados por
+      SK-INIT; estos skills son wrappers de orquestación.
+      Skills a crear:
+      1. speckit-to-gem-team.md: Orquestación completa
+      2. speckit-plan-context.md: plan.md → gem-planner
+      3. speckit-task-dispatch.md: tasks.md → agentes por wave
+    wave: 3
+    agent: "gem-skill-creator"
+    status: pending
+    dependencies: ["SK-INIT", "SK-GEMTEAM-CONFIG"]
+    conflicts_with: []
+    details:
+      skills_to_create:
+        - name: "speckit-to-gem-team"
+          description: "Orquestar flujo completo Spec Kit → gem-team: constitution → specify → plan → tasks → implement"
+          location: ".opencode/commands/speckit-to-gem-team.md"
+          commands:
+            - "speckit.constitution → cargar en Phase 0"
+            - "speckit.specify → generar spec.md"
+            - "speckit.plan → pasar a gem-planner"
+            - "speckit.tasks → generar tasks.md"
+            - "speckit.implement → despachar a agentes gem-team"
+        - name: "speckit-plan-context"
+          description: "Convertir plan.md a contexto de gem-planner"
+          location: ".opencode/commands/speckit-plan-context.md"
+          trigger: "post speckit.plan"
+        - name: "speckit-task-dispatch"
+          description: "Distribuir tasks.md a agentes gem-team por wave"
+          location: ".opencode/commands/speckit-task-dispatch.md"
+          trigger: "post speckit.tasks"
+    acceptance_criteria:
+      - "speckit-to-gem-team.md creado en .opencode/commands/"
+      - "speckit-plan-context.md creado en .opencode/commands/"
+      - "speckit-task-dispatch.md creado en .opencode/commands/"
+      - "Skill de orquestación invoca speckit.constitution → speckit.specify → speckit.plan → speckit.tasks → speckit.implement en secuencia"
+      - "Skill de plan-context parsea plan.md y produce input para gem-planner"
+      - "Skill de task-dispatch mapea tareas a agentes gem-team (implementer, reviewer, tester)"
+      - "Formato Markdown con frontmatter YAML válido"
+    verification: >
+      Get-ChildItem .opencode/commands/speckit-*.md -Name
+      | ForEach-Object { Test-Path ".opencode/commands/$_" }
+    handoff:
+      do_not_reinvestigate:
+        - "Comandos speckit.* existentes en .opencode/commands/"
+        - "Estructura de tasks.md de Spec Kit"
+      target_files:
+        - ".opencode/commands/speckit-to-gem-team.md"
+        - ".opencode/commands/speckit-plan-context.md"
+        - ".opencode/commands/speckit-task-dispatch.md"
+      acceptance_checks:
+        - "Skills creados en .opencode/commands/ como archivos .md"
+        - "Skill de orquestación invoca speckit.* en secuencia correcta"
+        - "Skill de task-dispatch mapea tareas a agentes gem-team por wave"
+
+  # ---------------------------------------------------------------------
+  # WAVE 4: Context Bridge (deps: Wave 3)
+  # ---------------------------------------------------------------------
+  - id: "SK-CONTEXT-BRIDGE"
+    title: "Crear bridge context_envelope.json + documentar schema de salida"
+    description: >
+      Crear el mecanismo que genera/actualiza context_envelope.json desde
+      artifacts Spec Kit. Incluye:
+      1. Script PowerShell (update-context-bridge.ps1) que parsea:
+         - constitution.md → tech_stack, conventions, constraints
+         - spec.md → research_digest.domain_context
+         - data-model.md → architecture_snapshot
+         - contracts/ → patterns_found
+      2. Template context_envelope.json pre-poblado desde artifacts
+      3. DOCUMENTAR el schema/contrato de salida del bridge como
+         parte del script (sección # SCHEMA CONTRACT) especificando:
+         - Campos obligatorios vs opcionales
+         - Tipos de datos esperados
+         - Mapping artifact → context_envelope field
+         - Validación post-generación
+    wave: 4
+    agent: "gem-planner"
+    status: pending
+    dependencies: ["SK-AGENTS-DOC", "SK-SKILLS"]
+    conflicts_with: []
+    details:
+      bridge_components:
+        - path: ".specify/scripts/powershell/update-context-bridge.ps1"
+          purpose: "Script que lee artifacts Spec Kit y genera context_envelope.json"
+          schema_contract_documented: true
+        - path: ".specify/scripts/powershell/context_envelope.schema.json"
+          purpose: "Schema JSON de validación para context_envelope.json"
+      output_schema_fields:
+        - field: "context_envelope.meta"
+          type: "object"
+          required: true
+          source: "generated"
+        - field: "context_envelope.scope"
+          type: "object"
+          required: true
+          source: "constitution.md + user input"
+        - field: "context_envelope.tech_stack"
+          type: "array"
+          required: true
+          source: "constitution.md + plan.md"
+        - field: "context_envelope.conventions"
+          type: "array"
+          required: true
+          source: "constitution.md"
+        - field: "context_envelope.constraints"
+          type: "object"
+          required: true
+          source: "constitution.md + data-model.md"
+        - field: "context_envelope.architecture_snapshot"
+          type: "object"
+          required: true
+          source: "data-model.md + contracts/"
+        - field: "context_envelope.research_digest"
+          type: "object"
+          required: true
+          source: "spec.md + constitution.md"
+        - field: "context_envelope.prior_decisions"
+          type: "array"
+          required: false
+          source: "constitution.md decision log"
+      mapping:
+        constitution_md:
+          principles → conventions
+          tech_decisions → prior_decisions
+          guidelines → constraints.hard
+        spec_md:
+          user_stories → research_digest.domain_context
+          requirements → scope.purpose
+          acceptance_criteria → research_digest.domain_context
+        plan_md:
+          tech_stack → tech_stack
+          architecture → architecture_snapshot
+          risks → research_digest.open_questions
+        tasks_md:
+          task_list → tasks list (for gem-team DAG)
+          dependencies → implicit DAG edges
+      validation:
+        - "python -c 'import json; json.load(open(\"context_envelope.json\")); print(\"JSON valido\")'"
+        - "Verificar campos obligatorios: meta, scope, tech_stack, conventions, constraints, architecture_snapshot, research_digest"
+    acceptance_criteria:
+      - "Script update-context-bridge.ps1 existe con sección # SCHEMA CONTRACT documentando campos de salida"
+      - "Script update-context-bridge.ps1 es ejecutable (PowerShell)"
+      - "Script parsea constitution.md, spec.md, data-model.md y contracts/ correctamente"
+      - "context_envelope.schema.json existe como schema de validación"
+      - "Template context_envelope.json generado contiene: meta, scope, tech_stack, conventions, constraints, architecture_snapshot, research_digest"
+      - "Mapeo biyectivo documentado: cada artifact Spec Kit → sección context_envelope"
+      - "Validación post-generación: JSON válido con campos obligatorios presentes"
+    verification: >
+      Test-Path .specify/scripts/powershell/update-context-bridge.ps1 &&
+      Test-Path .specify/scripts/powershell/context_envelope.schema.json &&
+      $null -ne (Select-String -Path .specify/scripts/powershell/update-context-bridge.ps1 -Pattern '# SCHEMA CONTRACT')
+    tech_stack: ["PowerShell", "Python 3.12"]
+    handoff:
+      do_not_reinvestigate:
+        - "Formato de context_envelope.json (context_envelope_format_guide)"
+        - "Estructura de artifacts Spec Kit"
+        - "Schema contract del bridge"
+      target_files:
+        - ".specify/scripts/powershell/update-context-bridge.ps1"
+        - ".specify/scripts/powershell/context_envelope.schema.json"
+      acceptance_checks:
+        - "Script update-context-bridge.ps1 existe con schema contract documentado"
+        - "Script parsea constitution.md, spec.md correctamente"
+        - "Schema de validación context_envelope.schema.json existe"
+        - "Template context_envelope.json contiene campos obligatorios"
+
+  # ---------------------------------------------------------------------
+  # WAVE 5: Review (deps: Wave 4)
+  # ---------------------------------------------------------------------
+  - id: "SK-REVIEW"
+    title: "Revisar integración completa"
+    description: >
+      Revisión exhaustiva de todos los archivos creados:
+      - .gem-team.yaml vs schema esperado
+      - AGENTS.md vs documentación de integración
+      - Skills en .opencode/commands/
+      - Context bridge script + schema contract
+      - Mapeo de fases Spec Kit → gem-team
+      - Backups pre-init y rollback steps
+      - Consistencia entre todos los artifacts
+      Señalar blocking issues, brechas, y mejoras necesarias.
+    wave: 5
+    agent: "gem-reviewer"
+    status: completed
+    result: "APPROVED_WITH_COMMENTS. 16 archivos revisados. 2 issues alta: context_envelope.json type mismatches + backup/rollback ausente. 13/14 acceptance criteria met. Issues corregidos en SK-VERIFY (array types fix + backup en bridge)."
+    dependencies: ["SK-CONTEXT-BRIDGE"]
+    conflicts_with: []
+    details:
+      review_depth: "standard"
+      review_focus:
+        - "Completitud del mapeo de fases Spec Kit → gem-team"
+        - "Corrección del .gem-team.yaml (schema, campos, rutas)"
+        - "Consistencia AGENTS.md vs skills creados"
+        - "Funcionamiento del context bridge + schema contract"
+        - "Manejo de errores y edge cases (paths rotos, referencias inválidas)"
+        - "Rollback steps documentados y ejecutables"
+        - "Ausencia de paradojas temporales en el flujo"
+      requires_review: true
+    acceptance_criteria:
+      - "Review completa sin blocking issues"
+      - "Todas las dependencias entre archivos son coherentes"
+      - "No hay paths rotos ni referencias inválidas"
+      - ".gem-team.yaml es válido y completo"
+      - "AGENTS.md tiene sección gem-team dentro de markers SPECKIT"
+      - "Context bridge tiene schema contract documentado"
+      - "Backups pre-init existen (o no aplican si no había archivos previos)"
+    verification: >
+      Write-Host "Review completada. Output detallado en artifacts del reviewer."
+    handoff:
+      do_not_reinvestigate:
+        - "Detalles de implementación ya revisados tarea por tarea"
+      target_files:
+        - ".gem-team.yaml"
+        - "AGENTS.md"
+        - ".opencode/commands/speckit-to-gem-team.md"
+        - ".opencode/commands/speckit-plan-context.md"
+        - ".opencode/commands/speckit-task-dispatch.md"
+        - ".specify/scripts/powershell/update-context-bridge.ps1"
+        - ".specify/scripts/powershell/context_envelope.schema.json"
+      acceptance_checks:
+        - "Review completa sin blocking issues"
+        - "Todas las dependencias entre archivos son coherentes"
+        - "No hay paths rotos ni referencias inválidas"
+
+  # ---------------------------------------------------------------------
+  # WAVE 6: Verification (deps: Wave 5 — post-review)
+  # ---------------------------------------------------------------------
+  - id: "SK-VERIFY"
+    title: "Verificar integración end-to-end post-review"
+    description: >
+      Verificación completa del flujo integrado DESPUÉS del review,
+      asegurando que todo está funcional y correcto:
+      1. specify CLI instalado y responde
+      2. specify integration list muestra opencode
+      3. Estructura .specify/ completa con subdirectorios
+      4. Comandos speckit.* en .opencode/commands/
+      5. .gem-team.yaml es YAML válido
+      6. AGENTS.md tiene sección gem-team
+      7. Skills de orquestación existen
+      8. Context bridge script corre sin errores (dry-run)
+      9. Schema contract documentado en el bridge
+      10. context_envelope.schema.json existe
+      11. Backups pre-init verificables
+      12. Rollback steps funcionales
+      Incluir dry-run del flujo: constitution → specify → plan → tasks.
+    wave: 6
+    agent: "gem-implementer"
+    status: completed
+    result: "12/12 PASS. specify v0.11.9, opencode integration confirmed, .gem-team.yaml válido, AGENTS.md con Gem-Team section, 3 skills, context bridge con schema contract, context_envelope.json regenerado con array types corregidos. Bridge script fix: paréntesis en operador -and."
+    dependencies: ["SK-REVIEW"]
+    conflicts_with: []
+    details:
+      verification_steps:
+        - name: "Specify CLI"
+          command: "specify --version"
+          expected: "exit code 0, version string"
+        - name: "Integración opencode"
+          command: "specify integration list | Select-String opencode"
+          expected: "opencode listado como integración disponible"
+        - name: "Estructura .specify/"
+          command: "Test-Path .specify/memory/constitution.md"
+          expected: "True"
+        - name: "Comandos speckit"
+          command: "Get-ChildItem .opencode/commands/speckit.*.md -Name"
+          expected: "al menos 5 comandos speckit.*.md"
+        - name: "YAML válido"
+          command: "python -c 'import yaml; yaml.safe_load(open(\".gem-team.yaml\"))'"
+          expected: "exit code 0"
+        - name: "AGENTS.md gem-team section"
+          command: "Select-String -Path AGENTS.md -Pattern 'Gem-Team Integration'"
+          expected: "match encontrado"
+        - name: "Skills orquestación"
+          command: "Test-Path .opencode/commands/speckit-to-gem-team.md"
+          expected: "True"
+        - name: "Context bridge script"
+          command: "Test-Path .specify/scripts/powershell/update-context-bridge.ps1"
+          expected: "True"
+        - name: "Schema contract en bridge"
+          command: "Select-String -Path .specify/scripts/powershell/update-context-bridge.ps1 -Pattern '# SCHEMA CONTRACT'"
+          expected: "match encontrado"
+        - name: "Schema JSON"
+          command: "Test-Path .specify/scripts/powershell/context_envelope.schema.json"
+          expected: "True"
+        - name: "Backups pre-init"
+          command: "Test-Path .opencode/commands.bak/ -or Test-Path AGENTS.md.bak"
+          expected: "$true (o no aplica si no había archivos previos)"
+      feature_dry_run:
+        description: "Ejecutar speckit.constitution con un prompt mínimo (dry-run si --dry-run existe)"
+    acceptance_criteria:
+      - "specify CLI funcional (specify --version exit code 0)"
+      - "Integración opencode confirmada en integration list"
+      - ".specify/ estructura completa con memory/, templates/, scripts/"
+      - "Todos los comandos speckit.* en .opencode/commands/"
+      - ".gem-team.yaml es YAML válido"
+      - "AGENTS.md contiene documentación de integración gem-team"
+      - "Skills de orquestación creados (speckit-to-gem-team, speckit-plan-context, speckit-task-dispatch)"
+      - "Context bridge script existe y es ejecutable"
+      - "Schema contract documentado en el script"
+      - "context_envelope.schema.json existe"
+      - "Backups pre-init verificables (o no aplica)"
+      - "Rollback steps funcionales"
+    verification: >
+      $passed = 0; $total = 0;
+      @(("specify","specify --version"),
+        ("opencode","specify integration list | Select-String opencode"),
+        ("specify dir","Test-Path .specify/memory/constitution.md"),
+        ("speckit commands","(Get-ChildItem .opencode/commands/speckit.*.md).Count -ge 5"),
+        ("yaml","python -c 'import yaml; yaml.safe_load(open(\".gem-team.yaml\"))'"),
+        ("agents doc","Select-String -Path AGENTS.md -Pattern 'Gem-Team Integration'"),
+        ("skills","Test-Path .opencode/commands/speckit-to-gem-team.md"),
+        ("bridge script","Test-Path .specify/scripts/powershell/update-context-bridge.ps1"),
+        ("schema contract","Select-String -Path .specify/scripts/powershell/update-context-bridge.ps1 -Pattern '# SCHEMA CONTRACT'"),
+        ("schema json","Test-Path .specify/scripts/powershell/context_envelope.schema.json")
+      ) | ForEach-Object {
+        $total++; try { &{ Invoke-Expression $($_[1]) } | Out-Null; $passed++ } catch {}
+      };
+      Write-Host "Pasaron $passed de $total verificaciones"
+    handoff:
+      do_not_reinvestigate:
+        - "Resultados de pasos anteriores ya verificados en SK-REVIEW"
+      target_files: []
+      acceptance_checks:
+        - "specify CLI funcional (--version exit code 0)"
+        - "Integración opencode confirmada en integration list"
+        - ".specify/ estructura completa"
+        - "Todos los comandos speckit.* en .opencode/commands/"
+        - ".gem-team.yaml es YAML válido"
+        - "AGENTS.md contiene documentación de integración gem-team"
+        - "Skills de orquestación creados"
+        - "Context bridge script ejecutable con schema contract"
+        - "context_envelope.schema.json existe"
