@@ -6,6 +6,9 @@ import { RoomTypesModule } from './room-types/room-types.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { RatesModule } from './rates/rates.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { HotelsModule } from './hotels/hotels.module';
+import { WhatsappModule } from './whatsapp/whatsapp.module';
+import { ChannelsModule } from './channels/channels.module';
 
 @Module({
   imports: [
@@ -16,6 +19,9 @@ import { DashboardModule } from './dashboard/dashboard.module';
     InventoryModule,
     RatesModule,
     DashboardModule,
+    HotelsModule,
+    WhatsappModule,
+    ChannelsModule,
   ],
 })
 export class AppModule {}

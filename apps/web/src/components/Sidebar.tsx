@@ -25,11 +25,11 @@ const mainNav = [
 
 const secondaryNav = [
   { href: "#", label: "Personal", icon: Users },
-  { href: "#", label: "Canal y web", icon: Sparkles },
+  { href: "/perfil", label: "Mi Perfil", icon: Sparkles },
 ];
 
 const bottomNav = [
-  { href: "#", label: "Configuración", icon: Settings },
+  { href: "/perfil", label: "Configuración", icon: Settings },
   { href: "/login", label: "Cerrar sesión", icon: LogOut },
 ];
 
