@@ -1,6 +1,7 @@
-# 🏨 Proyecto Hoteles
+# 🏨 Habidex
 
-Sistema de gestión hotelera desarrollado con **Spec-Driven Development (SDD)** usando **Spec Kit** y orquestado por **gem-team** en **OpenCode**.
+Gestión hotelera B2B — Channel Manager + Revenue Management  
+**Hecho en Colombia, para la Costa Caribe**
 
 ---
 

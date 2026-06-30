@@ -96,7 +96,7 @@ Cada prompt incluye la versión mobile (375×812) y su adaptación a desktop (�
 ### Sidebar de escritorio (aplica a todas las pantallas):
 - Ancho: 240px fijo
 - Fondo: #0f4c81 con texto blanco
-- Logo arriba: "HotelManager" en blanco 18px bold
+- Logo arriba: "Habidex" en blanco 18px bold
 - Navegación: icono 20px + texto 14px, item activo con bg rgba(255,255,255,0.15)
 - Items: Dashboard, Disponibilidad, Tarifas, Reservas, Perfil/Config
 - Badge del plan actual abajo: "Free" pill con bg rgba(255,255,255,0.2)
@@ -141,7 +141,7 @@ Create a mobile-first login/registration screen for a B2B hotel management PWA t
 
 ## Layout (single column, centered)
 1. TOP SECTION (40% height, gradient bg #0f4c81 → #1a6bb5):
-   - Centered logo placeholder: white circle 80px with house icon, below it "HotelManager" in white bold 22px, below "Tu hotel en control" white 14px
+   - Centered logo placeholder: white circle 80px with house icon, below it "Habidex" in white bold 22px, below "Tu hotel en control" white 14px
 
 2. BOTTOM SECTION (60% height, white bg, rounded top corners 24px):
    - Tab switcher: two centered text buttons side by side "Iniciar sesión" (active) | "Registrarse" (inactive). Active tab: text #0f4c81 bold with 2px underline. Inactive: text #9ca3af.

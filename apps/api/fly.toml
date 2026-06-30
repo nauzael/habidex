@@ -2,7 +2,7 @@
 # Generated: 2026-06-29
 # Docs: https://fly.io/docs/reference/configuration/
 
-app = "hotel-platform-api"
+app = "habidex-api"
 primary_region = "mia"
 
 [build]
@@ -68,4 +68,4 @@ primary_region = "mia"
 
   [[services.http_checks.headers]]
     name = "Host"
-    value = "hotel-platform-api.fly.dev"
+    value = "habidex-api.fly.dev"

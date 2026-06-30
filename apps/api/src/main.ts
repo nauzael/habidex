@@ -39,8 +39,8 @@ async function bootstrap() {
 
   // Swagger / OpenAPI
   const config = new DocumentBuilder()
-    .setTitle('Hotel Platform API')
-    .setDescription('B2B hotel management platform API')
+    .setTitle('Habidex API')
+    .setDescription('Plataforma B2B de gestión hotelera — Golfo de Morrosquillo')
     .setVersion('0.1.0')
     .addBearerAuth()
     .build();
