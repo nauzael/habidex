@@ -24,4 +24,4 @@ import { ChannelsModule } from './channels/channels.module';
     ChannelsModule,
   ],
 })
-export class AppModule {}
+export class AppModule {} /* HABIDEX DEPLOY 20260630133003 */
