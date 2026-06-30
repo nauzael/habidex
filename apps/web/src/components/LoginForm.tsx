@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { login } from "@/lib/auth";
+import { login, getUserRole } from "@/lib/auth";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -19,7 +19,12 @@ export default function LoginForm() {
     setLoading(true);
     try {
       await login(email, password);
-      router.push("/dashboard");
+      const role = getUserRole();
+      if (role === 'ADMIN') {
+        router.push("/admin");
+      } else {
+        router.push("/dashboard");
+      }
     } catch {
       setError("Credenciales inválidas. Intenta de nuevo.");
     } finally {
