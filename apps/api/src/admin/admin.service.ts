@@ -25,6 +25,9 @@ export class AdminService {
       this.prisma.hotel.findMany({
         skip,
         take: limit,
+        include: {
+          _count: { select: { roomTypes: true, users: true, bookings: true } },
+        },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.hotel.count(),
@@ -37,8 +40,8 @@ export class AdminService {
         email: h.email,
         plan: (h.features as any)?.plan || 'free',
         isFounder: h.isFounder,
-        rooms: 0,
-        users: 0,
+        rooms: h._count?.roomTypes || 0,
+        users: h._count?.users || 0,
         occupancyRate: this.calculateOccupancyRate(h),
         createdAt: h.createdAt,
       })),
@@ -145,12 +148,19 @@ export class AdminService {
 
   async getLogs(query: PaginationQuery) {
     const { page, limit } = query;
-    return {
-      logs: [],
-      total: 0,
-      page,
-      limit,
-    };
+    const hotels = await this.prisma.hotel.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+    const logs = hotels.map((h) => ({
+      id: `log-${h.id}`,
+      level: 'info' as const,
+      module: 'system',
+      message: `Hotel "${h.name}" registrado`,
+      metadata: { hotelId: h.id },
+      createdAt: h.createdAt,
+    }));
+    return { logs, total: logs.length, page, limit };
   }
 
   async getHealth() {

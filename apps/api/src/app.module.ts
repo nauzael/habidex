@@ -10,6 +10,7 @@ import { HotelsModule } from './hotels/hotels.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { ChannelsModule } from './channels/channels.module';
 import { AdminModule } from './admin/admin.module';
+import { BookingsModule } from './bookings/bookings.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AdminModule } from './admin/admin.module';
     WhatsappModule,
     ChannelsModule,
     AdminModule,
+    BookingsModule,
   ],
 })
 export class AppModule {} /* HABIDEX DEPLOY 20260630133003 */

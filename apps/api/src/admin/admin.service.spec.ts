@@ -335,13 +335,58 @@ describe('AdminService', () => {
   });
 
   describe('getLogs', () => {
-    it('should return paginated logs', async () => {
+    it('should generate logs from real hotel data when no formal logs exist', async () => {
+      const hotels = [
+        { id: 'h-1', name: 'Hotel Paraíso', email: 'paraiso@test.com', phone: '+573001234567', address: 'Calle 1', timezone: 'America/Bogota', currency: 'COP', isFounder: false, features: { plan: 'free', active: true }, createdAt: mockDate, updatedAt: mockDate },
+        { id: 'h-2', name: 'Hotel Sol', email: 'sol@test.com', phone: '+573001234568', address: 'Calle 2', timezone: 'America/Bogota', currency: 'COP', isFounder: true, features: { plan: 'premium', active: true }, createdAt: mockDate, updatedAt: mockDate },
+      ];
+      mockPrisma.hotel.findMany.mockResolvedValue(hotels);
+
       const result = await service.getLogs({ page: 1, limit: 50 });
 
-      expect(result.logs).toBeDefined();
-      expect(Array.isArray(result.logs)).toBe(true);
+      expect(result.logs).toHaveLength(2);
+      expect(result.logs[0]).toMatchObject({
+        id: 'log-h-1',
+        level: 'info',
+        module: 'system',
+        message: expect.stringContaining('Hotel Paraíso'),
+        metadata: { hotelId: 'h-1' },
+      });
+      expect(result.logs[1]).toMatchObject({
+        id: 'log-h-2',
+        message: expect.stringContaining('Hotel Sol'),
+      });
+      expect(result.total).toBe(2);
       expect(result.page).toBe(1);
       expect(result.limit).toBe(50);
+    });
+
+    it('should return empty array when no hotels exist', async () => {
+      mockPrisma.hotel.findMany.mockResolvedValue([]);
+
+      const result = await service.getLogs({ page: 1, limit: 50 });
+
+      expect(result.logs).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('should apply order and limit by page size', async () => {
+      const hotels = Array.from({ length: 5 }, (_, i) => ({
+        id: `h-${i}`,
+        name: `Hotel ${i}`,
+        email: null, phone: null, address: null, timezone: 'America/Bogota', currency: 'COP',
+        isFounder: false, features: {}, createdAt: new Date(`2026-06-${30 - i}T00:00:00Z`), updatedAt: new Date(`2026-06-${30 - i}T00:00:00Z`),
+      }));
+      mockPrisma.hotel.findMany.mockResolvedValue(hotels);
+
+      const result = await service.getLogs({ page: 1, limit: 3 });
+
+      expect(mockPrisma.hotel.findMany).toHaveBeenCalledWith({
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+      });
+      expect(result.logs).toHaveLength(5);
+      expect(result.total).toBe(5);
     });
   });
 
