@@ -245,7 +245,7 @@ function HealthCard({
           {/* Service rows */}
           <div className="space-y-3">
             <ServiceRow name="Servidor" ok={health.server === "ok"} />
-            <ServiceRow name="Base de datos" ok={health.database === "ok"} />
+            <ServiceRow name="Base de datos" ok={health.database === "connected"} />
             <ServiceRow name="Versión" ok={true} extra={health.version} />
           </div>
 
