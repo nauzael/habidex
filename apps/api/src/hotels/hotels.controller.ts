@@ -19,13 +19,13 @@ import { UpdateHotelDto } from './dto';
 export class HotelsController {
   constructor(private readonly hotelsService: HotelsService) {}
 
-  @Get('profile')
+  @Get('me')
   @ApiOperation({ summary: 'Obtener perfil completo del hotel autenticado' })
   async getProfile(@Request() req: any) {
     return this.hotelsService.findProfile(req.user.hotelId);
   }
 
-  @Patch('profile')
+  @Patch('me')
   @ApiOperation({ summary: 'Actualizar perfil del hotel' })
   async updateProfile(@Request() req: any, @Body() dto: UpdateHotelDto) {
     return this.hotelsService.updateProfile(req.user.hotelId, dto);
