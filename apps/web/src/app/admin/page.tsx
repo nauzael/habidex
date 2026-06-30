@@ -11,35 +11,26 @@ import {
   XCircle,
   RefreshCw,
   TrendingUp,
-  TrendingDown,
 } from "lucide-react";
-
 /* ─── Types ─── */
 
 interface AdminStats {
   totalHotels: number;
-  activeHotels: number;
   totalUsers: number;
   totalBookings: number;
-  revenueMonth: number;
-  occupancyAvg: number;
-  growthPercent: number;
-  growthData?: { month: string; hotels: number }[];
+  totalRooms: number;
+  avgOccupancy: number;
+  activeSubscriptions: number;
+  systemUptime: string;
+  databaseSize: string;
 }
 
 interface HealthStatus {
-  status: "healthy" | "degraded" | "down";
+  server: "ok" | "error";
   database: "ok" | "error";
-  redis: "ok" | "error";
-  kafka: "ok" | "error";
-  uptime: number;
+  uptime: string;
+  timestamp: string;
   version: string;
-}
-
-/* ─── Helpers ─── */
-
-function formatCOP(amount: number): string {
-  return "$" + Math.round(amount).toLocaleString("es-CO");
 }
 
 /* ─── Skeleton ─── */
@@ -129,7 +120,7 @@ export default function AdminDashboardPage() {
           icon={Building2}
           label="Hoteles"
           value={stats?.totalHotels?.toString() ?? "—"}
-          sub={`${stats?.activeHotels ?? 0} activos`}
+          sub="registrados"
           color="text-slate-900"
           bgColor="bg-slate-100"
         />
@@ -144,26 +135,41 @@ export default function AdminDashboardPage() {
         <KpiCard
           icon={Activity}
           label="Ocupación promedio"
-          value={stats?.occupancyAvg ? `${stats.occupancyAvg}%` : "—"}
-          sub="general"
+          value={stats?.avgOccupancy ? `${stats.avgOccupancy}%` : "—"}
+          sub={`${stats?.totalRooms ?? 0} habitaciones totales`}
           color="text-sage-600"
           bgColor="bg-sage-100"
         />
         <KpiCard
           icon={TrendingUp}
-          label="Ingresos del mes"
-          value={stats?.revenueMonth ? formatCOP(stats.revenueMonth) : "—"}
-          sub={stats?.growthPercent ? `${stats.growthPercent > 0 ? "+" : ""}${stats.growthPercent}% vs mes ant.` : ""}
+          label="BD / Suscripciones"
+          value={stats?.databaseSize ?? "—"}
+          sub={`${stats?.activeSubscriptions ?? 0} activas`}
           color="text-slate-900"
           bgColor="bg-slate-100"
-          trend={stats?.growthPercent}
         />
       </div>
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {/* Growth chart */}
-        <GrowthChart data={stats?.growthData} />
+        {/* System info */}
+        <div className="rounded-lg border border-border bg-card p-5 shadow-xs">
+          <h3 className="mb-4 font-display text-base font-bold text-slate-900">Sistema</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="text-sm text-muted">Uptime</span>
+              <span className="text-sm font-semibold text-slate-900">{stats?.systemUptime ?? "—"}</span>
+            </div>
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="text-sm text-muted">Reservas totales</span>
+              <span className="text-sm font-semibold text-slate-900">{stats?.totalBookings ?? 0}</span>
+            </div>
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="text-sm text-muted">Tamaño BD</span>
+              <span className="text-sm font-semibold text-sage-600">{stats?.databaseSize ?? "—"}</span>
+            </div>
+          </div>
+        </div>
 
         {/* Health status */}
         <HealthCard health={health} onRetry={fetchData} />
@@ -181,7 +187,6 @@ function KpiCard({
   sub,
   color,
   bgColor,
-  trend,
 }: {
   icon: React.ComponentType<{ size?: number }>;
   label: string;
@@ -189,7 +194,6 @@ function KpiCard({
   sub: string;
   color: string;
   bgColor: string;
-  trend?: number;
 }) {
   return (
     <div className="rounded-lg border border-border bg-card p-5 shadow-xs">
@@ -203,54 +207,8 @@ function KpiCard({
         {value}
       </div>
       <div className="flex items-center gap-1.5 text-xs text-muted">
-        {trend !== undefined && trend !== 0 && (
-          <span className={trend > 0 ? "text-sage-600" : "text-red-500"}>
-            {trend > 0 ? <TrendingUp size={14} className="inline" /> : <TrendingDown size={14} className="inline" />}
-          </span>
-        )}
         {sub}
       </div>
-    </div>
-  );
-}
-
-function GrowthChart({ data }: { data?: { month: string; hotels: number }[] }) {
-  const maxVal = data ? Math.max(...data.map((d) => d.hotels), 1) : 1;
-
-  return (
-    <div className="rounded-lg border border-border bg-card p-6 shadow-xs">
-      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
-        CRECIMIENTO
-      </div>
-      <h3 className="mb-5 font-display text-lg font-bold tracking-tight text-text">
-        Hoteles registrados
-      </h3>
-
-      {!data || data.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <TrendingUp size={32} className="mb-2 text-soft" />
-          <p className="font-semibold text-text">Sin datos de crecimiento</p>
-          <p className="text-xs text-muted">No hay datos históricos disponibles</p>
-        </div>
-      ) : (
-        <div className="flex items-end gap-2" style={{ height: 160 }}>
-          {data.map((point, i) => {
-            const h = `${Math.max((point.hotels / maxVal) * 100, 4)}%`;
-            return (
-              <div key={point.month} className="flex flex-1 flex-col items-center justify-end">
-                <span className="mb-1 text-[10px] font-medium text-muted tabular-nums">
-                  {point.hotels}
-                </span>
-                <div
-                  className="w-full max-w-[40px] rounded-t-sm bg-slate-900 transition-colors hover:bg-slate-700"
-                  style={{ height: h }}
-                />
-                <span className="mt-1.5 text-[10px] text-muted">{point.month}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
@@ -262,27 +220,6 @@ function HealthCard({
   health: HealthStatus | null;
   onRetry: () => void;
 }) {
-  const statusColor =
-    health?.status === "healthy"
-      ? "text-sage-600"
-      : health?.status === "degraded"
-        ? "text-amber-500"
-        : "text-red-500";
-
-  const statusBg =
-    health?.status === "healthy"
-      ? "bg-sage-100"
-      : health?.status === "degraded"
-        ? "bg-amber-100"
-        : "bg-red-100";
-
-  const statusLabel =
-    health?.status === "healthy"
-      ? "Saludable"
-      : health?.status === "degraded"
-        ? "Degradado"
-        : "Caído";
-
   return (
     <div className="rounded-lg border border-border bg-card p-6 shadow-xs">
       <div className="mb-2 flex items-center justify-between">
@@ -305,36 +242,16 @@ function HealthCard({
         </div>
       ) : (
         <>
-          {/* Status badge */}
-          <div className="mb-5 flex items-center gap-3">
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${statusBg} ${statusColor}`}
-            >
-              {health.status === "healthy" ? (
-                <CheckCircle2 size={14} />
-              ) : (
-                <XCircle size={14} />
-              )}
-              {statusLabel}
-            </span>
-            <span className="text-xs text-muted">v{health.version}</span>
-          </div>
-
           {/* Service rows */}
           <div className="space-y-3">
+            <ServiceRow name="Servidor" ok={health.server === "ok"} />
             <ServiceRow name="Base de datos" ok={health.database === "ok"} />
-            <ServiceRow name="Redis" ok={health.redis === "ok"} />
-            <ServiceRow name="Kafka" ok={health.kafka === "ok"} />
+            <ServiceRow name="Versión" ok={true} extra={health.version} />
           </div>
 
           {/* Uptime */}
           <div className="mt-4 border-t border-border pt-3 text-xs text-muted">
-            Uptime:{" "}
-            {health.uptime > 86400
-              ? `${Math.floor(health.uptime / 86400)}d ${Math.floor((health.uptime % 86400) / 3600)}h`
-              : health.uptime > 3600
-                ? `${Math.floor(health.uptime / 3600)}h ${Math.floor((health.uptime % 3600) / 60)}m`
-                : `${Math.floor(health.uptime / 60)}m`}
+            Uptime: {health.uptime}
           </div>
         </>
       )}
@@ -342,21 +259,24 @@ function HealthCard({
   );
 }
 
-function ServiceRow({ name, ok }: { name: string; ok: boolean }) {
+function ServiceRow({ name, ok, extra }: { name: string; ok: boolean; extra?: string }) {
   return (
     <div className="flex items-center justify-between rounded-md border border-border bg-surface-2 px-4 py-3">
       <span className="text-sm font-medium text-text">{name}</span>
-      {ok ? (
-        <span className="inline-flex items-center gap-1 text-xs font-semibold text-sage-600">
-          <CheckCircle2 size={14} />
-          OK
-        </span>
-      ) : (
-        <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-500">
-          <XCircle size={14} />
-          Error
-        </span>
-      )}
+      <div className="flex items-center gap-2">
+        {extra && <span className="text-xs text-muted">{extra}</span>}
+        {ok ? (
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-sage-600">
+            <CheckCircle2 size={14} />
+            OK
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-500">
+            <XCircle size={14} />
+            Error
+          </span>
+        )}
+      </div>
     </div>
   );
 }

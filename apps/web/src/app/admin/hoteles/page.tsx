@@ -7,14 +7,13 @@ import {
   Building2,
   Search,
   Users,
-  CalendarCheck,
   MoreHorizontal,
   AlertTriangle,
   RefreshCw,
-  ChevronRight,
   Crown,
   Zap,
   Star,
+  ChevronRight,
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -23,13 +22,11 @@ interface AdminHotel {
   id: string;
   name: string;
   email: string | null;
-  phone: string | null;
-  timezone: string;
-  currency: string;
   plan: string;
-  active: boolean;
-  userCount: number;
-  bookingCount: number;
+  isFounder: boolean;
+  rooms: number;
+  users: number;
+  occupancyRate: number;
   createdAt: string;
 }
 
@@ -122,7 +119,6 @@ export default function AdminHotelesPage() {
     return (
       h.name.toLowerCase().includes(q) ||
       h.email?.toLowerCase().includes(q) ||
-      h.phone?.toLowerCase().includes(q) ||
       h.plan?.toLowerCase().includes(q)
     );
   });
@@ -197,9 +193,9 @@ export default function AdminHotelesPage() {
               <tr className="border-b border-border bg-surface-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
                 <th className="px-5 py-3">Hotel</th>
                 <th className="px-5 py-3">Plan</th>
-                <th className="px-5 py-3 hidden sm:table-cell">Contacto</th>
+                <th className="px-5 py-3 hidden sm:table-cell">Habitaciones</th>
                 <th className="px-5 py-3 hidden md:table-cell">Usuarios</th>
-                <th className="px-5 py-3 hidden md:table-cell">Reservas</th>
+                <th className="px-5 py-3 hidden md:table-cell">Ocupación</th>
                 <th className="px-5 py-3 hidden lg:table-cell">Registro</th>
                 <th className="px-5 py-3 text-right">Acción</th>
               </tr>
@@ -228,15 +224,9 @@ export default function AdminHotelesPage() {
                             <span className="font-semibold text-text">
                               {hotel.name}
                             </span>
-                            <span
-                              className={`inline-block h-2 w-2 rounded-full ${
-                                hotel.active ? "bg-sage-500" : "bg-red-500"
-                              }`}
-                            />
+                            <span className="inline-block h-2 w-2 rounded-full bg-sage-500" />
                           </div>
-                          <div className="text-xs text-muted">
-                            {hotel.timezone} · {hotel.currency}
-                          </div>
+                          <div className="text-xs text-muted">{hotel.email || "—"}</div>
                         </div>
                       </div>
                     </td>
@@ -249,19 +239,18 @@ export default function AdminHotelesPage() {
                       </span>
                     </td>
                     <td className="hidden px-5 py-4 sm:table-cell">
-                      <div className="text-sm text-text">{hotel.email || "—"}</div>
-                      <div className="text-xs text-muted">{hotel.phone || "—"}</div>
+                      <span className="text-sm text-text">{hotel.rooms ?? 0} hab.</span>
                     </td>
                     <td className="hidden px-5 py-4 md:table-cell">
                       <span className="inline-flex items-center gap-1 text-sm text-text">
                         <Users size={14} className="text-muted" />
-                        {hotel.userCount}
+                        {hotel.users ?? 0}
                       </span>
                     </td>
                     <td className="hidden px-5 py-4 md:table-cell">
                       <span className="inline-flex items-center gap-1 text-sm text-text">
-                        <CalendarCheck size={14} className="text-muted" />
-                        {hotel.bookingCount}
+                        <Building2 size={14} className="text-muted" />
+                        {hotel.rooms ?? 0} hab.
                       </span>
                     </td>
                     <td className="hidden px-5 py-4 lg:table-cell">
