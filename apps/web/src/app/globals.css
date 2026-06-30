@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Plus Jakarta Sans", sans-serif;
+  --font-body: "Inter", sans-serif;
+
+  --color-slate-900: #1e2e4a;
+  --color-slate-800: #2a3e5a;
+  --color-slate-700: #2e4a7a;
+  --color-slate-500: #4a6b9a;
+  --color-slate-100: #e5eaf3;
+
+  --color-terracota-600: #c46a48;
+  --color-terracota-500: #d47a5a;
+  --color-terracota-100: #f8e6dd;
+  --color-terracota-50: #fcf3ee;
+
+  --color-sage-600: #4a7a5c;
+  --color-sage-500: #5a8c6f;
+  --color-sage-100: #e1ece5;
+
+  --color-amber-500: #c49b4a;
+  --color-amber-100: #f4ecda;
+
+  --color-red-500: #c95a5a;
+  --color-red-100: #f4dada;
+
+  --color-bg: #f7f4f0;
+  --color-card: #ffffff;
+  --color-border: #e5e0d8;
+  --color-border-strong: #d6d0c4;
+  --color-text: #1c1c2e;
+  --color-muted: #6b6b80;
+  --color-soft: #9a9aa8;
+  --color-inverse: #ffffff;
+  --color-surface-2: #fbf9f6;
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before {
+    box-sizing: border-box;
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    font-family: var(--font-body), "Inter", sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    color: #1c1c2e;
+    background: #f7f4f0;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+@layer utilities {
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
