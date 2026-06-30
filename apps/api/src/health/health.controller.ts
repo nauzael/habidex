@@ -1,22 +1,25 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Optional() private readonly prisma?: PrismaService) {}
 
   @Get()
   @ApiOperation({ summary: 'Check API health status' })
   async check() {
-    let dbStatus = 'connected';
+    let dbStatus = 'disconnected';
     let redisStatus = 'disconnected';
 
-    try {
-      await this.prisma.$queryRaw`SELECT 1`;
-    } catch {
-      dbStatus = 'disconnected';
+    if (this.prisma) {
+      try {
+        await this.prisma.$queryRaw`SELECT 1`;
+        dbStatus = 'connected';
+      } catch {
+        dbStatus = 'disconnected';
+      }
     }
 
     // Redis check via Upstash REST API
