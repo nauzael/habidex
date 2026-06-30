@@ -25,9 +25,6 @@ export class AdminService {
       this.prisma.hotel.findMany({
         skip,
         take: limit,
-        include: {
-          _count: { select: { roomTypes: true, users: true, bookings: true } },
-        },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.hotel.count(),
@@ -40,8 +37,8 @@ export class AdminService {
         email: h.email,
         plan: (h.features as any)?.plan || 'free',
         isFounder: h.isFounder,
-        rooms: h._count.roomTypes,
-        users: h._count.users,
+        rooms: 0,
+        users: 0,
         occupancyRate: this.calculateOccupancyRate(h),
         createdAt: h.createdAt,
       })),
